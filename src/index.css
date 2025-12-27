@@ -1,4 +1,33 @@
+@import "highlight.js/styles/github-dark.css";
 @import "tailwindcss";
+
+/* 配置深色模式 - Tailwind CSS 4.x 语法 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ========================================
+   CSS 变量 - 颜色主题系统
+   ======================================== */
+:root {
+  --bg-page: #f5f5f7;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --text-primary: #1d1d1f;
+  --text-secondary: #86868b;
+  --border: #e5e5ea;
+  --primary: #95C0EC;
+  --primary-hover: #7aaddd;
+}
+
+.dark {
+  --bg-page: #000000;
+  --bg-card: #1c1c1e;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --text-primary: #f5f5f7;
+  --text-secondary: #8e8e93;
+  --border: #3a3a3c;
+  --primary: #95C0EC;
+  --primary-hover: #b0d4f0;
+}
 
 /* 全局样式重置与基础设置 */
 * {
@@ -9,6 +38,9 @@ html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
@@ -17,7 +49,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 滚动条美化 */
+/* ========================================
+   滚动条美化 - 深色模式适配
+   ======================================== */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -30,105 +64,174 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3a3a3c;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-/* 自定义光标样式 */
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4c;
+}
+
+/* ========================================
+   彗星光标 - 蕾姆精心优化的样式
+   深色模式下增强发光效果
+   ======================================== */
+
+/* 隐藏原生光标 */
 .custom-caret-textarea {
   caret-color: transparent;
 }
 
 .custom-caret-textarea::selection {
-  background-color: rgba(149, 192, 236, 0.2);
+  background-color: rgba(149, 192, 36, 0.25);
+}
+
+.dark .custom-caret-textarea::selection {
+  background-color: rgba(149, 192, 236, 0.3);
+}
+
+/* 光标容器 - 添加丝滑过渡 */
+.comet-caret {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* 光标主体 */
+.comet-caret-main {
+  position: relative;
+  width: 2.5px;
+  height: 22px;
+  background: linear-gradient(180deg,
+    rgba(149, 192, 236, 0.85) 0%,
+    #95C0EC 50%,
+    rgba(149, 192, 236, 0.85) 100%
+  );
+  border-radius: 2px;
+  box-shadow:
+    0 0 8px rgba(149, 192, 236, 0.6),
+    0 0 16px rgba(149, 192, 236, 0.3);
+  animation: caret-blink 1.1s ease-in-out infinite;
+  transition: box-shadow 0.3s ease;
+}
+
+/* 深色模式下的光标 - 更亮更强的发光效果 */
+.dark .comet-caret-main {
+  background: linear-gradient(180deg,
+    rgba(149, 192, 236, 0.95) 0%,
+    #95C0EC 50%,
+    rgba(149, 192, 236, 0.95) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(149, 192, 236, 0.8),
+    0 0 20px rgba(149, 192, 236, 0.5),
+    0 0 32px rgba(149, 192, 236, 0.25);
+}
+
+/* 输入状态：暂停闪烁 */
+.comet-caret.typing .comet-caret-main {
+  animation-play-state: paused;
+  opacity: 1;
 }
 
 /* 光标闪烁动画 */
 @keyframes caret-blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.5; }
 }
 
-/* 光标光晕呼吸动画 */
-@keyframes caret-glow {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.1);
-  }
-}
-
-/* 粒子消失动画 */
-@keyframes particle-fade {
-  0% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) translateX(-8px) scale(0.5);
-  }
-}
-
-/* 彗星光标组件样式 */
-.comet-caret {
-  position: fixed;
-  z-index: 50;
-  pointer-events: none;
-  /* 移除 transition，使用 requestAnimationFrame 实现丝滑动画 */
-}
-
-.comet-caret-main {
-  position: relative;
-  width: 2px;
-  height: 20px;
-  background-color: #95C0EC;
-  border-radius: 1px;
-  animation: caret-blink 1s ease-in-out infinite;
-}
-
+/* 光标核心高光点 */
 .comet-caret-glow {
   position: absolute;
-  left: -6px;
-  top: 0;
-  width: 16px;
-  height: 16px;
-  background-color: rgba(149, 192, 236, 0.4);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(149, 192, 236, 0.6) 40%,
+    transparent 70%
+  );
   border-radius: 50%;
-  filter: blur(4px);
-  animation: caret-glow 1.5s ease-in-out infinite;
+  filter: blur(1px);
+  animation: glow-pulse 2s ease-in-out infinite;
 }
 
+/* 深色模式下增强光晕 */
+.dark .comet-caret-glow {
+  background: radial-gradient(circle,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(149, 192, 236, 0.8) 40%,
+    rgba(149, 192, 236, 0.3) 70%
+  );
+}
+
+/* 光晕呼吸动画 */
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+/* 彗星尾巴 */
 .comet-tail {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 32px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #95C0EC);
-  filter: blur(1px);
-  transition: opacity 150ms, left 0.1s, right 0.1s, transform 0.1s;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  filter: blur(1.5px);
+  transition:
+    opacity 0.12s ease-out,
+    left 0.15s ease-out,
+    right 0.15s ease-out,
+    background 0.15s ease-out;
+}
+
+.dark .comet-tail {
+  filter: blur(2px);
 }
 
 /* 向右移动时（输入）- 尾巴在左侧 */
 .comet-caret[data-direction="1"] .comet-tail {
   right: 100%;
-  transform-origin: right center;
+  margin-right: -1px;
+  background: linear-gradient(270deg,
+    rgba(149, 192, 236, 0.8) 0%,
+    rgba(149, 192, 236, 0.3) 60%,
+    transparent 100%
+  );
 }
 
-/* 向左移动时（删除）- 尾巴在右侧，方向反转 */
+/* 向左移动时（删除）- 尾巴在右侧 */
 .comet-caret[data-direction="-1"] .comet-tail {
   left: 100%;
-  right: auto;
-  background: linear-gradient(270deg, transparent, #95C0EC);
-  transform-origin: left center;
+  margin-left: -1px;
+  background: linear-gradient(90deg,
+    rgba(149, 192, 236, 0.8) 0%,
+    rgba(149, 192, 236, 0.3) 60%,
+    transparent 100%
+  );
 }
 
+/* 尾巴激活状态 */
 .comet-tail.active {
   opacity: 1;
 }
@@ -137,24 +240,50 @@ body {
   opacity: 0;
 }
 
+/* 彗星粒子 */
 .comet-particle {
   position: absolute;
   top: 50%;
   border-radius: 50%;
-  background-color: #95C0EC;
-  /* 通过 CSS 变量控制偏移方向 */
-  offset-distance: var(--particle-offset, 10px);
+  background: radial-gradient(circle,
+    rgba(255, 255, 255, 0.9) 0%,
+    #95C0EC 50%,
+    transparent 70%
+  );
+  box-shadow: 0 0 4px rgba(149, 192, 236, 0.8);
 }
 
-/* 向右移动时（输入）- 粒子在左侧，向左延伸 */
+/* 深色模式下增强粒子效果 */
+.dark .comet-particle {
+  background: radial-gradient(circle,
+    rgba(255, 255, 255, 1) 0%,
+    #95C0EC 50%,
+    rgba(149, 192, 236, 0.4) 70%
+  );
+  box-shadow: 0 0 6px rgba(149, 192, 236, 1);
+}
+
+/* 向右移动时（输入）- 粒子在左侧 */
 .comet-caret[data-direction="1"] .comet-particle {
   right: 100%;
   transform: translate(calc(var(--particle-offset, 10px) * -1), -50%);
 }
 
-/* 向左移动时（删除）- 粒子在右侧，向右延伸 */
+/* 向左移动时（删除）- 粒子在右侧 */
 .comet-caret[data-direction="-1"] .comet-particle {
   left: 100%;
   right: auto;
   transform: translate(var(--particle-offset, 10px), -50%);
+}
+
+/* 粒子消失动画 */
+@keyframes particle-fade {
+  0% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(-10px) scale(0.3);
+  }
 }
