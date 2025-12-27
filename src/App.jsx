@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Send, Plus, Code, Image, FileText, Settings,
   User, Bot, Copy, Check, Ellipsis, MessageSquare,
-  Paperclip, Mic, Sticker, X, Sidebar
+  Paperclip, Mic, Sticker, X, Sidebar, PanelLeftClose, PanelLeftOpen, Menu
 } from 'lucide-react'
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
   const [copiedId, setCopiedId] = useState(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showTools, setShowTools] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const quickActions = [
     { icon: Code, label: '代码生成' },
@@ -50,11 +51,25 @@ function App() {
 
   return (
     <div className="h-screen flex bg-white">
+      {/* 移动端遮罩 */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* 侧边栏 */}
-      <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-[#f9f9f9] border-r border-black/5 flex flex-col transition-all duration-200`}>
+      <aside className={`
+        fixed lg:relative z-50 h-full
+        ${sidebarCollapsed ? 'w-16' : 'w-64'}
+        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        bg-[#f9f9f9] border-r border-black/5 flex flex-col
+        transition-all duration-300
+      `}>
         {/* Logo */}
-        <div className="p-3 border-b border-black/5">
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+        <div className="p-3 border-b border-black/5 flex items-center justify-between">
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
             <div className="w-8 h-8 bg-[#95C0EC] rounded-lg flex items-center justify-center flex-shrink-0">
               <Bot className="w-4 h-4 text-white" />
             </div>
@@ -101,6 +116,7 @@ function App() {
                 key={item}
                 className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2 w-full px-3'} py-2 rounded-lg text-[14px] text-[#1d1d1f] hover:bg-black/[0.03] transition-colors`}
                 title={sidebarCollapsed ? item : ''}
+                onClick={() => setMobileSidebarOpen(false)}
               >
                 <MessageSquare className="w-4 h-4 text-[#86868b] flex-shrink-0" />
                 {!sidebarCollapsed && <span className="truncate">{item}</span>}
@@ -109,22 +125,45 @@ function App() {
           </div>
         </div>
 
-        {/* 底部设置 */}
+        {/* 底部设置 + 折叠按钮 */}
         <div className="p-2 border-t border-black/5">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="flex items-center justify-center w-full py-2 rounded-lg text-[14px] text-[#1d1d1f] hover:bg-black/[0.03] transition-colors"
-          >
-            <Sidebar className="w-4 h-4 text-[#86868b]" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[14px] text-[#1d1d1f] hover:bg-black/[0.03] transition-colors"
+              title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="w-4 h-4 text-[#86868b]" />
+              ) : (
+                <>
+                  <PanelLeftClose className="w-4 h-4 text-[#86868b]" />
+                  <span className="text-[13px] text-[#86868b]">收起</span>
+                </>
+              )}
+            </button>
+            {!sidebarCollapsed && (
+              <button className="p-2 rounded-lg text-[14px] text-[#1d1d1f] hover:bg-black/[0.03] transition-colors">
+                <Settings className="w-4 h-4 text-[#86868b]" />
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
       {/* 主区域 */}
-      <main className="flex-1 flex flex-col bg-white">
+      <main className="flex-1 flex flex-col bg-white min-w-0">
         {/* 顶部栏 */}
         <header className="h-12 border-b border-black/5 flex items-center justify-between px-4">
-          <h2 className="text-[15px] font-medium text-[#1d1d1f]">新对话</h2>
+          <div className="flex items-center gap-2">
+            <button
+              className="lg:hidden p-2 hover:bg-black/[0.03] rounded-lg transition-colors"
+              onClick={() => setMobileSidebarOpen(true)}
+            >
+              <Menu className="w-5 h-5 text-[#86868b]" />
+            </button>
+            <h2 className="text-[15px] font-medium text-[#1d1d1f]">新对话</h2>
+          </div>
           <button className="p-2 hover:bg-black/[0.03] rounded-lg transition-colors">
             <Ellipsis className="w-5 h-5 text-[#86868b]" />
           </button>
@@ -132,43 +171,38 @@ function App() {
 
         {/* 消息区域 */}
         <div className="flex-1 overflow-y-auto">
-          <div className="py-4">
+          <div className="py-4 max-w-4xl mx-auto">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`group ${message.role === 'user' ? 'flex justify-end px-4 py-3' : 'flex gap-4 px-6 py-4'}`}
+                className={`group ${message.role === 'user' ? 'flex justify-end px-4 py-3' : 'px-6 py-4'}`}
               >
-                {/* AI 消息 - 平铺全宽 */}
+                {/* AI 消息 - 平铺全宽，无头像 */}
                 {message.role === 'assistant' && (
-                  <>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#95C0EC]">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="text-[15px] text-[#1d1d1f] whitespace-pre-wrap leading-relaxed">
-                            {message.content}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => copyMessage(message.id, message.content)}
-                            className="p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors"
-                          >
-                            {copiedId === message.id ? (
-                              <Check className="w-4 h-4 text-[#95C0EC]" />
-                            ) : (
-                              <Copy className="w-4 h-4 text-[#86868b]" />
-                            )}
-                          </button>
-                        </div>
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="text-[15px] text-[#1d1d1f] whitespace-pre-wrap leading-relaxed">
+                          {message.content}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <button
+                          onClick={() => copyMessage(message.id, message.content)}
+                          className="p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors"
+                        >
+                          {copiedId === message.id ? (
+                            <Check className="w-4 h-4 text-[#95C0EC]" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-[#86868b]" />
+                          )}
+                        </button>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
-                {/* 用户消息 - 气泡模式 */}
+                {/* 用户消息 - 气泡模式，无头像 */}
                 {message.role === 'user' && (
                   <div className="flex items-end gap-3 max-w-2xl">
                     <div className="relative group/bubble">
@@ -191,9 +225,6 @@ function App() {
                         </button>
                       </div>
                     </div>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#e5e5ea]">
-                      <User className="w-4 h-4 text-[#86868b]" />
-                    </div>
                   </div>
                 )}
               </div>
@@ -201,9 +232,9 @@ function App() {
           </div>
         </div>
 
-        {/* 输入区域 - 全宽 */}
-        <div className="border-t border-black/5 bg-white p-4">
-          <div className="bg-white rounded-xl shadow-sm shadow-black/[0.03] border border-black/10 focus-within:border-[#95C0EC] focus-within:shadow-md focus-within:shadow-[#95C0EC]/10 transition-all">
+        {/* 输入区域 */}
+        <div className="border-t border-black/5 bg-white p-3 sm:p-4">
+          <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm shadow-black/[0.03] border border-black/10 focus-within:border-[#95C0EC] focus-within:shadow-md focus-within:shadow-[#95C0EC]/10 transition-all">
             {/* 工具栏 */}
             <div className="flex items-center gap-1 px-3 py-2 border-b border-black/5">
               <button
