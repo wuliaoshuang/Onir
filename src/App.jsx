@@ -4,10 +4,49 @@ import {
   Copy, Check, Ellipsis, MessageSquare,
   Paperclip, Mic, Sticker, X, PanelLeftClose, PanelLeftOpen, Menu
 } from 'lucide-react'
+import { MessageContent } from './components/MessageContent'
+import { ThemeToggle } from './components/ThemeToggle'
 
 function App() {
   const [messages, setMessages] = useState([
-    { id: 1, role: 'assistant', content: '你好！我是 AI 助手，有什么可以帮你的吗？' }
+    { id: 1, role: 'assistant', content: `# Markdown 渲染测试
+
+你好！我是 AI 助手，这是**富文本渲染**效果的演示：
+
+## 📝 支持的语法
+
+### 1. 文字样式
+- **粗体文字**
+- *斜体文字*
+- ~~删除线~~ (GFM)
+
+### 2. 代码
+行内代码：\`console.log('Hello')\`
+
+代码块：
+\`\`\`javascript
+function greet(name) {
+  console.log(\`Hello, \${name}!\`)
+  return true
+}
+\`\`\`
+
+### 3. 链接
+访问 [OpenAI](https://openai.com) 了解更多
+
+### 4. 列表
+- 第一项
+- 第二项
+  - 嵌套项
+- 第三项
+
+### 5. 引用
+> 这是一段引用文字
+> 可以有多行
+
+---
+
+试试发送包含 Markdown 的消息吧！🚀` }
   ])
   const [input, setInput] = useState('')
   const [copiedId, setCopiedId] = useState(null)
@@ -16,36 +55,31 @@ function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   // 光标状态
+  const [isFocused, setIsFocused] = useState(false) // 跟踪输入框是否聚焦
   const [caretVisible, setCaretVisible] = useState(false)
-  const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 })
   const [tailActive, setTailActive] = useState(false)
-  const [textareaRect, setTextareaRect] = useState({ left: 0, top: 0 })
+  const [isTyping, setIsTyping] = useState(false) // 输入状态，用于暂停闪烁
+  const [caretHeight, setCaretHeight] = useState(22) // 动态光标高度
+  const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 })
   const textareaRef = useRef(null)
   const mirrorRef = useRef(null)
-  const caretRef = useRef(null)
   const lastPosRef = useRef({ x: 0, y: 0 })
   const tailTimeoutRef = useRef(null)
+  const typingTimeoutRef = useRef(null) // 输入后恢复闪烁的定时器
+  const focusCooldownRef = useRef(false) // 聚焦冷却期，禁用拖尾
 
-  // 智能预测相关
-  const currentPosRef = useRef({ x: 0, y: 0 }) // 当前显示位置
-  const targetPosRef = useRef({ x: 0, y: 0 }) // 目标位置（实际光标位置）
-  const lastInputTimeRef = useRef(0) // 上次输入时间
-  const animationFrameRef = useRef(null) // 动画帧ID
+  // 目标位置（相对于容器）
+  const targetPosRef = useRef({ x: 0, y: 0 })
   const moveDirectionRef = useRef(1) // 移动方向：1=向右，-1=向左
 
-  // 同步 mirror 样式和位置
+  // 同步 mirror 样式
   const syncMirrorStyle = () => {
     const textarea = textareaRef.current
     const mirror = mirrorRef.current
     if (!textarea || !mirror) return
 
-    // 更新 textarea 位置
-    const rect = textarea.getBoundingClientRect()
-    setTextareaRect({ left: rect.left, top: rect.top })
-
     const computed = window.getComputedStyle(textarea)
 
-    // 需要同步的所有样式属性
     const properties = [
       'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
       'letterSpacing', 'lineHeight', 'textTransform',
@@ -61,160 +95,241 @@ function App() {
     })
   }
 
-  // 获取光标位置
+  // 计算光标高度（基于行高）
+  const calculateCaretHeight = () => {
+    const textarea = textareaRef.current
+    if (!textarea) return 22
+
+    const computed = window.getComputedStyle(textarea)
+    const fontSize = parseFloat(computed.fontSize)
+    const lineHeight = computed.lineHeight
+
+    let height
+    if (lineHeight === 'normal') {
+      height = fontSize * 1.2
+    } else {
+      height = parseFloat(lineHeight)
+    }
+
+    // 确保高度合理
+    return Math.max(18, Math.min(height, 40))
+  }
+
+  // 检查光标是否在可视区域内
+  const isCaretVisible = (rawX, rawY) => {
+    const textarea = textareaRef.current
+    if (!textarea) return true
+
+    const computed = window.getComputedStyle(textarea)
+    const paddingTop = parseFloat(computed.paddingTop)
+    const paddingBottom = parseFloat(computed.paddingBottom)
+    const paddingLeft = parseFloat(computed.paddingLeft)
+    const paddingRight = parseFloat(computed.paddingRight)
+
+    // textarea 的可视区域边界（包含 padding）
+    const viewportTop = textarea.scrollTop
+    const viewportBottom = textarea.scrollTop + textarea.clientHeight
+    const viewportLeft = textarea.scrollLeft
+    const viewportRight = textarea.scrollLeft + textarea.clientWidth
+
+    // 有效内容区域（排除 padding）
+    const contentTop = paddingTop
+    const contentBottom = textarea.scrollHeight - paddingBottom
+    const contentLeft = paddingLeft
+    const contentRight = textarea.scrollWidth - paddingRight
+
+    // 光标位置和尺寸
+    const caretTop = rawY
+    const caretBottom = rawY + caretHeight
+    const caretLeft = rawX
+    const caretRight = rawX + 2.5 // 光标宽度
+
+    // 【关键】检查光标是否在有效内容区域内（严格检查，不能进入 padding 区域）
+    // 光标顶部必须在有效内容区域内
+    const inContentY = caretTop >= contentTop && caretTop < contentBottom
+    const inContentX = caretLeft >= contentLeft && caretLeft < contentRight
+
+    // 检查光标是否在可视区域内
+    const tolerance = 2 // 小容差
+    const isVisibleY = caretBottom > viewportTop + tolerance && caretTop < viewportBottom - tolerance
+    const isVisibleX = caretRight > viewportLeft + tolerance && caretLeft < viewportRight - tolerance
+
+    return inContentY && inContentX && isVisibleY && isVisibleX
+  }
+
+  // 获取光标位置（使用纯 offsetLeft/offsetTop 方案 - 更可靠）
   const getCaretPosition = () => {
     const textarea = textareaRef.current
     const mirror = mirrorRef.current
-    if (!textarea || !mirror) return { x: 0, y: 0 }
+    if (!textarea || !mirror) return { x: 0, y: 0, height: 22, rawX: 0, rawY: 0 }
 
-    // 直接使用 textarea.value，而不是 input 状态
-    // 因为 input 状态更新可能滞后于 selectionStart
+    const computed = window.getComputedStyle(textarea)
+
+    // 计算光标高度
+    const height = calculateCaretHeight()
+    setCaretHeight(height)
+
+    // 获取 textarea 的 offset（相对于其 offsetParent）
+    const textareaOffsetX = textarea.offsetLeft
+    const textareaOffsetY = textarea.offsetTop
+
+    // 设置 mirror 的样式以匹配 textarea
+    const properties = [
+      'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
+      'letterSpacing', 'lineHeight', 'textTransform',
+      'wordSpacing', 'whiteSpace', 'wordWrap', 'textAlign',
+      'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight',
+      'borderWidth', 'boxSizing'
+    ]
+    properties.forEach(prop => {
+      mirror.style[prop] = computed[prop]
+    })
+
+    // 【关键修复】mirror 宽度必须与 textarea 的 clientWidth 同步
+    mirror.style.width = textarea.clientWidth + 'px'
+
+    // 复制内容到光标位置
     const textBeforeCaret = textarea.value.substring(0, textarea.selectionStart)
-
-    // 清空 mirror 并设置内容
     mirror.textContent = textBeforeCaret
 
-    // 创建零宽字符 span 来定位
+    // 插入定位探针
     const span = document.createElement('span')
-    span.textContent = '\u200B' // 零宽字符
+    span.textContent = '|'
     mirror.appendChild(span)
 
-    const spanRect = span.getBoundingClientRect()
-    const textareaCurrentRect = textarea.getBoundingClientRect()
+    // 【核心】使用 offsetLeft/offsetTop 获取位置
+    // span.offsetLeft 是相对于 mirror 的，已经包含了 padding
+    const rawX = span.offsetLeft // 在内容中的原始位置
+    const rawY = span.offsetTop // 在内容中的原始位置
 
-    // 计算相对于 textarea 左上角的位置
-    const x = spanRect.left - textareaCurrentRect.left
-    const y = spanRect.top - textareaCurrentRect.top
+    // 加上 textarea.offsetLeft 得到相对于容器的位置（减去滚动）
+    const x = rawX + textareaOffsetX - textarea.scrollLeft
+    const y = rawY + textareaOffsetY - textarea.scrollTop
 
-    // 清理
+    // 清理探针
     mirror.removeChild(span)
 
-    return { x, y }
+    return { x, y, height, rawX, rawY }
+  }
+
+  // 自动增高 textarea
+  const autoGrowTextarea = () => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    // 重置高度以获取正确的 scrollHeight
+    textarea.style.height = 'auto'
+
+    // 计算新高度（最小高度 24px，最大高度 240px）
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 240)
+    textarea.style.height = newHeight + 'px'
   }
 
   // 更新光标位置
-  const updateCaret = () => {
+  const updateCaret = (isInputEvent = false, enableTail = true) => {
     const textarea = textareaRef.current
     if (!textarea) return
 
     const pos = getCaretPosition()
-    const rect = textarea.getBoundingClientRect()
-    const now = performance.now()
-
-    // 更新 textarea 位置
-    setTextareaRect({ left: rect.left, top: rect.top })
 
     // 计算移动方向（用于尾巴方向）
     const dx = pos.x - lastPosRef.current.x
     if (dx > 0.5) {
-      moveDirectionRef.current = 1 // 向右移动（输入）
+      moveDirectionRef.current = 1
     } else if (dx < -0.5) {
-      moveDirectionRef.current = -1 // 向左移动（删除）
+      moveDirectionRef.current = -1
     }
 
-    // 计算移动距离（用于尾巴触发）
     const dy = pos.y - lastPosRef.current.y
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    // 移动超过阈值时触发尾巴
-    if (distance > 3) {
+    // 移动超过阈值时触发尾巴（冷却期或 enableTail 为 false 时不触发）
+    if (enableTail && !focusCooldownRef.current && distance > 3) {
       setTailActive(true)
       if (tailTimeoutRef.current) clearTimeout(tailTimeoutRef.current)
       tailTimeoutRef.current = setTimeout(() => setTailActive(false), 150)
     }
 
-    // 更新上次位置记录
     lastPosRef.current = pos
 
-    // 设置目标位置（全局坐标）
+    // 直接设置目标位置（相对于容器）
     targetPosRef.current = {
-      x: rect.left + pos.x,
-      y: rect.top + pos.y
+      x: pos.x,
+      y: pos.y
     }
 
-    // 记录输入时间
-    lastInputTimeRef.current = now
+    // 输入时暂停闪烁
+    if (isInputEvent) {
+      setIsTyping(true)
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      // 800ms 后恢复闪烁
+      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 800)
+    }
 
-    setCaretVisible(true)
+    // 触发重渲染来更新光标位置
+    setCaretPosition(pos)
+
+    // 【关键】只有聚焦时且光标在可视区域内才显示光标
+    if (isFocused) {
+      const visible = isCaretVisible(pos.rawX, pos.rawY)
+      setCaretVisible(visible)
+    }
   }
-
-  // 平滑动画循环 - 带智能速度调整
-  useEffect(() => {
-    const caretEl = caretRef.current
-    if (!caretEl) return
-
-    let lastFrameTime = performance.now()
-
-    const animate = (currentTime) => {
-      const frameDelta = currentTime - lastFrameTime
-      lastFrameTime = currentTime
-
-      if (caretVisible) {
-        // 计算与目标的距离
-        const dx = targetPosRef.current.x - currentPosRef.current.x
-        const dy = targetPosRef.current.y - currentPosRef.current.y
-        const dist = Math.sqrt(dx * dx + dy * dy)
-
-        // 检查是否正在输入（100ms 内有输入）
-        const isTyping = (currentTime - lastInputTimeRef.current) < 100
-        const frameRatio = Math.min(frameDelta / 16.67, 2)
-
-        let lerpFactor
-        if (isTyping) {
-          // 输入时快速跟随
-          lerpFactor = Math.min(2.0 * frameRatio, 1)
-        } else {
-          // 停止输入后平滑移动
-          lerpFactor = Math.min(0.25 * frameRatio, 1)
-        }
-
-        // 距离很小时直接到达
-        if (dist < 0.5) {
-          currentPosRef.current = { ...targetPosRef.current }
-        } else {
-          currentPosRef.current = {
-            x: currentPosRef.current.x + dx * lerpFactor,
-            y: currentPosRef.current.y + dy * lerpFactor
-          }
-        }
-
-        // 设置位置和方向
-        caretEl.style.transform = `translate(${currentPosRef.current.x}px, ${currentPosRef.current.y}px)`
-        caretEl.style.setProperty('--move-direction', moveDirectionRef.current.toString())
-      }
-
-      animationFrameRef.current = requestAnimationFrame(animate)
-    }
-
-    animationFrameRef.current = requestAnimationFrame(animate)
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-    }
-  }, [caretVisible])
 
   // 初始化和窗口变化时同步样式
   useEffect(() => {
     syncMirrorStyle()
-    const handleResize = () => syncMirrorStyle()
+    const handleResize = () => {
+      syncMirrorStyle()
+      setCaretHeight(calculateCaretHeight())
+    }
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      if (tailTimeoutRef.current) clearTimeout(tailTimeoutRef.current)
+    }
   }, [])
 
   // 监听输入变化
   useEffect(() => {
-    updateCaret()
+    updateCaret(true) // 输入变化时标记为输入事件
+  }, [input])
+
+  // 监听 input 变化来自动增高 textarea
+  useEffect(() => {
+    autoGrowTextarea()
   }, [input])
 
   const handleInputFocus = () => {
+    setIsFocused(true)
     syncMirrorStyle()
-    updateCaret()
-    setCaretVisible(true)
+
+    // 聚焦时主动关闭拖尾效果
+    setTailActive(false)
+    if (tailTimeoutRef.current) clearTimeout(tailTimeoutRef.current)
+
+    // 进入冷却期，防止聚焦时触发拖尾
+    focusCooldownRef.current = true
+    setTimeout(() => {
+      focusCooldownRef.current = false
+    }, 200) // 200ms 冷却期
+
+    // 先获取当前位置并初始化 lastPosRef
+    const pos = getCaretPosition()
+    lastPosRef.current = pos
+    // 直接设置位置，不通过 updateCaret（避免重复获取位置）
+    targetPosRef.current = { x: pos.x, y: pos.y }
+    setCaretPosition(pos)
+    setCaretHeight(pos.height)
+
+    // 【关键】聚焦时也检查光标是否在可视区域内
+    const visible = isCaretVisible(pos.rawX, pos.rawY)
+    setCaretVisible(visible)
   }
 
   const handleInputBlur = () => {
+    setIsFocused(false)
     setTimeout(() => setCaretVisible(false), 100)
   }
 
@@ -253,227 +368,246 @@ function App() {
   }
 
   return (
-    <>
-      {/* 镜像 div - 用于计算光标位置 */}
-      <div
-        ref={mirrorRef}
-        id="caret-mirror"
-        style={{
-          position: 'fixed',
-          visibility: 'hidden',
-          zIndex: -10,
-          overflow: 'hidden',
-          left: textareaRect.left,
-          top: textareaRect.top,
-        }}
-      />
-
-      {/* 自定义光标组件 */}
-      {caretVisible && (
-        <div
-          ref={caretRef}
-          className="comet-caret"
-          data-direction={moveDirectionRef.current > 0 ? '1' : '-1'}
-          style={{
-            // 位置由 transform 在动画循环中直接设置
-          }}
-        >
-          {/* 彗星尾巴 */}
-          <div className={`comet-tail ${tailActive ? 'active' : ''}`} />
-
-          {/* 尾巴粒子 */}
-          {tailActive && [...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="comet-particle"
-              style={{
-                '--particle-offset': `${(i + 1) * 10 + 8}px`,
-                width: `${6 - i}px`,
-                height: `${6 - i}px`,
-                opacity: 0.6 - i * 0.12,
-                animation: `particle-fade 0.4s ease-out ${i * 0.03}s both`,
-              }}
-            />
-          ))}
-
-          {/* 主光标 */}
-          <div className="comet-caret-main">
-            {/* 光标头部光晕 */}
-            <div className="comet-caret-glow" />
-          </div>
-        </div>
-      )}
-
-      <div className="h-screen flex bg-white">
-        {/* 移动端遮罩 */}
+    <div className="h-screen flex bg-[#f5f5f7] dark:bg-black">
+        {/* 移动端遮罩 - 无边框，纯模糊背景 */}
         {mobileSidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-40 lg:hidden"
             onClick={() => setMobileSidebarOpen(false)}
           />
         )}
 
-        {/* 侧边栏 */}
+        {/* 侧边栏 - macOS 风格无边框 */}
         <aside className={`
           fixed lg:relative z-50 h-full
           ${sidebarCollapsed ? 'w-16' : 'w-64'}
           ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          bg-[#f9f9f9] border-r border-black/5 flex flex-col
-          transition-all duration-300
+          bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex flex-col
+          transition-all duration-300 ease-out
         `}>
-          {/* Logo + 收起按钮区域 */}
-          <div className="p-3 border-b border-black/5">
-            <div className="flex items-center justify-between gap-2">
-              <div className={`flex items-center ${sidebarCollapsed ? 'justify-center flex-1' : 'gap-3'}`}>
-                <div className="w-8 h-8 bg-[#95C0EC] rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                {!sidebarCollapsed && (
-                  <span className="font-semibold text-[#1d1d1f] text-[15px]">Assistant</span>
-                )}
-              </div>
-              {/* 桌面端折叠按钮 */}
+          {/* Logo 区域 */}
+          <div className={ sidebarCollapsed ? "py-4" : "p-4" }>
+            {sidebarCollapsed ? (
+              /* 折叠状态：Logo 图标 hover 变成展开按钮 */
               <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden lg:flex p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors"
-                title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+                onClick={() => setSidebarCollapsed(false)}
+                className="group/btn relative w-9 h-9 mx-auto flex items-center justify-center"
               >
-                {sidebarCollapsed ? (
-                  <PanelLeftOpen className="w-4 h-4 text-[#86868b]" />
-                ) : (
-                  <PanelLeftClose className="w-4 h-4 text-[#86868b]" />
-                )}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#95C0EC] to-[#7aaddd] rounded-xl flex items-center justify-center shadow-lg shadow-[#95C0EC]/30 transition-all duration-200 group-hover/btn:scale-105">
+                  <svg className="w-5 h-5 text-white transition-opacity duration-200 group-hover/btn:opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <PanelLeftOpen className="w-5 h-5 text-white absolute opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200" />
+                </div>
+                {/* Tooltip */}
+                <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[12px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                  展开侧边栏
+                </div>
               </button>
-            </div>
-          </div>
-
-          {/* 新对话按钮 */}
-          <div className="p-2">
-            <button className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2 w-full px-3'} py-2 bg-[#95C0EC] text-white rounded-lg text-[15px] font-medium hover:bg-[#7aaddd] active:scale-[0.98] transition-all`}>
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              {!sidebarCollapsed && <span>新对话</span>}
-            </button>
-          </div>
-
-          {/* 快捷操作 */}
-          {!sidebarCollapsed && (
-            <div className="px-2 pb-2">
-              <p className="text-[12px] text-[#86868b] px-3 mb-1 font-medium">快捷操作</p>
-              <div className="space-y-0.5">
-                {quickActions.map((action) => (
-                  <button
-                    key={action.label}
-                    className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[14px] text-[#1d1d1f] hover:bg-black/[0.03] transition-colors"
-                  >
-                    <action.icon className="w-4 h-4 text-[#95C0EC]" />
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 历史记录 */}
-          <div className="flex-1 px-2 overflow-y-auto">
-            {!sidebarCollapsed && (
-              <p className="text-[12px] text-[#86868b] px-3 mb-1 font-medium">历史</p>
-            )}
-            <div className="space-y-0.5">
-              {['项目构思', '代码重构', '文案优化', '技术方案', '产品规划'].map((item) => (
+            ) : (
+              /* 展开状态：Logo + 折叠按钮 */
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gradient-to-br from-[#95C0EC] to-[#7aaddd] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#95C0EC]/30">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] text-[17px] tracking-tight">Assistant</span>
+                </div>
                 <button
-                  key={item}
-                  className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2 w-full px-3'} py-2 rounded-lg text-[14px] text-[#1d1d1f] hover:bg-black/[0.03] transition-colors`}
-                  title={sidebarCollapsed ? item : ''}
-                  onClick={() => setMobileSidebarOpen(false)}
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="hidden lg:flex p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
+                  title="收起侧边栏"
                 >
-                  <MessageSquare className="w-4 h-4 text-[#86868b] flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="truncate">{item}</span>}
+                  <PanelLeftClose className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 折叠状态：按钮区域 */}
+          {sidebarCollapsed ? (
+            <div className="flex-1 flex flex-col items-center gap-2 py-2">
+              {/* 新对话 */}
+              <button className="group/btn relative w-9 h-9 bg-[#95C0EC] text-white rounded-xl flex items-center justify-center hover:bg-[#7aaddd] dark:hover:bg-[#b0d4f0] active:scale-95 transition-all duration-200 shadow-lg shadow-[#95C0EC]/25">
+                <Plus className="w-5 h-5" />
+                <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[12px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                  新对话
+                </div>
+              </button>
+
+              {/* 快捷操作 */}
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  className="group/btn relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+                >
+                  <action.icon className="w-5 h-5 text-[#95C0EC]" />
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[12px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                    {action.label}
+                  </div>
                 </button>
               ))}
-            </div>
-          </div>
 
-          {/* 底部设置按钮 */}
-          <div className="p-2 border-t border-black/5">
-            <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[14px] text-[#1d1d1f] hover:bg-black/[0.03] transition-colors">
-              <Settings className="w-4 h-4 text-[#86868b]" />
-              {!sidebarCollapsed && <span>设置</span>}
-            </button>
-          </div>
+              {/* 底部设置 */}
+              <button className="group/btn relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 mt-auto">
+                <Settings className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
+                <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[12px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                  设置
+                </div>
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* 展开状态：新对话按钮 */}
+              <div className="px-3 pb-3">
+                <button className="flex items-center gap-2.5 w-full px-4 py-2.5 bg-[#95C0EC] text-white rounded-2xl text-[15px] font-medium hover:bg-[#7aaddd] dark:hover:bg-[#b0d4f0] active:scale-[0.97] transition-all duration-200 shadow-lg shadow-[#95C0EC]/25">
+                  <Plus className="w-4 h-4 flex-shrink-0" />
+                  <span>新对话</span>
+                </button>
+              </div>
+
+              {/* 快捷操作 */}
+              <div className="px-3 pb-4">
+                <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">快捷操作</p>
+                <div className="space-y-0.5">
+                  {quickActions.map((action) => (
+                    <button
+                      key={action.label}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+                    >
+                      <action.icon className="w-4 h-4 text-[#95C0EC]" />
+                      <span>{action.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 历史记录 */}
+              <div className="flex-1 px-3 overflow-y-auto">
+                <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">历史</p>
+                <div className="space-y-0.5">
+                  {['项目构思', '代码重构', '文案优化', '技术方案', '产品规划'].map((item) => (
+                    <button
+                      key={item}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+                      onClick={() => setMobileSidebarOpen(false)}
+                    >
+                      <MessageSquare className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93] flex-shrink-0" />
+                      <span className="truncate">{item}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 底部设置按钮 */}
+              <div className="p-3">
+                <button className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200">
+                  <Settings className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+                  <span>设置</span>
+                </button>
+              </div>
+            </>
+          )}
         </aside>
 
         {/* 主区域 */}
-        <main className="flex-1 flex flex-col bg-white min-w-0 relative">
-          {/* 顶部栏 */}
-          <header className="h-12 border-b border-black/5 flex items-center justify-between px-4">
-            <div className="flex items-center gap-2">
+        <main className="flex-1 flex flex-col min-w-0 relative">
+          {/* 顶部栏 - macOS 风格无边框，纯背景色 */}
+          <header className="h-14 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-30">
+            <div className="flex items-center gap-3">
               <button
-                className="lg:hidden p-2 hover:bg-black/[0.03] rounded-lg transition-colors"
+                className="lg:hidden p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
                 onClick={() => setMobileSidebarOpen(true)}
               >
-                <Menu className="w-5 h-5 text-[#86868b]" />
+                <Menu className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
               </button>
-              <h2 className="text-[15px] font-medium text-[#1d1d1f]">新对话</h2>
+              <h2 className="text-[16px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">新对话</h2>
             </div>
-            <button className="p-2 hover:bg-black/[0.03] rounded-lg transition-colors">
-              <Ellipsis className="w-5 h-5 text-[#86868b]" />
-            </button>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <button className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
+                <Ellipsis className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
+              </button>
+            </div>
           </header>
 
-          {/* 消息区域 */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="py-4 max-w-4xl mx-auto">
+          {/* 消息区域 - 去除边框，纯白背景 */}
+          <div className="flex-1 overflow-y-auto bg-[#f5f5f7] dark:bg-black">
+            <div className="py-6 max-w-3xl mx-auto px-4">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`group ${message.role === 'user' ? 'flex justify-end px-4 py-3' : 'px-6 py-4'}`}
+                  className={`group ${message.role === 'user' ? 'flex justify-end py-3' : 'py-4'}`}
                 >
-                  {/* AI 消息 - 平铺全宽，无头像 */}
+                  {/* AI 消息 */}
                   {message.role === 'assistant' && (
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="text-[15px] text-[#1d1d1f] whitespace-pre-wrap leading-relaxed">
-                            {message.content}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                          <button
-                            onClick={() => copyMessage(message.id, message.content)}
-                            className="p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors"
-                          >
-                            {copiedId === message.id ? (
-                              <Check className="w-4 h-4 text-[#95C0EC]" />
-                            ) : (
-                              <Copy className="w-4 h-4 text-[#86868b]" />
-                            )}
-                          </button>
-                        </div>
+                    <div className="flex-1 relative pb-8">
+                      <div className="prose prose-sm max-w-none">
+                        <MessageContent content={message.content} />
+                      </div>
+                      {/* 操作按钮 - 左下角（消息下方），直接显示 */}
+                      <div className="absolute bottom-0 left-0 flex items-center gap-1">
+                        <button
+                          onClick={() => copyMessage(message.id, message.content)}
+                          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200 text-[#86868b] dark:text-[#8e8e93] hover:text-[#95C0EC]"
+                          title="复制"
+                        >
+                          {copiedId === message.id ? (
+                            <Check className="w-4 h-4 text-[#95C0EC]" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200 text-[#86868b] dark:text-[#8e8e93] hover:text-[#95C0EC]"
+                          title="重新生成"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                        <button
+                          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200 text-[#86868b] dark:text-[#8e8e93] hover:text-[#95C0EC]"
+                          title="点赞"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                          </svg>
+                        </button>
+                        <button
+                          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200 text-[#86868b] dark:text-[#8e8e93] hover:text-[#95C0EC]"
+                          title="点踩"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   )}
 
-                  {/* 用户消息 - 气泡模式，无头像 */}
+                  {/* 用户消息 */}
                   {message.role === 'user' && (
-                    <div className="flex items-end gap-3 max-w-2xl ml-auto">
-                      <div className="relative group/bubble">
-                        <div className="px-4 py-2.5 bg-[#95C0EC] text-white rounded-2xl rounded-br-md">
-                          <p className="text-[15px] whitespace-pre-wrap leading-relaxed">
-                            {message.content}
-                          </p>
+                    <div className="flex justify-end">
+                      <div className="relative group/bubble max-w-xl">
+                        <div className="px-5 py-3 bg-[#95C0EC] text-white rounded-2xl rounded-br-md shadow-lg shadow-[#95C0EC]/20">
+                          <div className="prose prose-sm max-w-none prose-p:text-white prose-invert">
+                            <MessageContent content={message.content} />
+                          </div>
                         </div>
-                        {/* 复制按钮 */}
-                        <div className="absolute top-1/2 -translate-y-1/2 left-full ml-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity">
+                        {/* 操作按钮 - 右下角 */}
+                        <div className="absolute -bottom-8 right-0 flex items-center gap-1 opacity-0 group-hover/bubble:opacity-100 transition-opacity">
                           <button
                             onClick={() => copyMessage(message.id, message.content)}
-                            className="p-1.5 bg-white border border-black/10 rounded-lg hover:bg-black/[0.03] transition-colors shadow-sm"
+                            className="p-1.5 bg-white dark:bg-[#1c1c1e] rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 shadow-sm"
+                            title="复制"
                           >
                             {copiedId === message.id ? (
                               <Check className="w-3.5 h-3.5 text-[#95C0EC]" />
                             ) : (
-                              <Copy className="w-3.5 h-3.5 text-[#86868b]" />
+                              <Copy className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
                             )}
                           </button>
                         </div>
@@ -485,107 +619,156 @@ function App() {
             </div>
           </div>
 
-          {/* 输入区域 */}
-          <div className="border-t border-black/5 bg-white p-3 sm:p-4">
-            <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm shadow-black/[0.03] border border-black/10 focus-within:border-[#95C0EC] focus-within:shadow-md focus-within:shadow-[#95C0EC]/10 transition-all relative">
-              {/* 工具栏 */}
-              <div className="flex items-center gap-1 px-3 py-2 border-b border-black/5">
-                <button
-                  onClick={() => setShowTools(!showTools)}
-                  className="p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4 text-[#86868b]" />
-                </button>
-                <button className="p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors">
-                  <Paperclip className="w-4 h-4 text-[#86868b]" />
-                </button>
-                <button className="p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors">
-                  <Image className="w-4 h-4 text-[#86868b]" />
-                </button>
-                <div className="flex-1" />
-                <button className="p-1.5 hover:bg-black/[0.03] rounded-lg transition-colors">
-                  <Mic className="w-4 h-4 text-[#86868b]" />
-                </button>
+          {/* 输入区域 - macOS 风格悬浮卡片 */}
+          <div className="bg-gradient-to-t from-[#f5f5f7] dark:from-black via-[#f5f5f7] dark:via-black to-transparent p-4 pb-6">
+            <div className="max-w-3xl mx-auto">
+              {/* 悬浮输入框 */}
+              <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl shadow-2xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
+                {/* 工具栏 - 无边框分隔 */}
+                <div className="flex items-center gap-1 px-4 py-3">
+                  <button
+                    onClick={() => setShowTools(!showTools)}
+                    className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
+                  >
+                    <Plus className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+                  </button>
+                  <button className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
+                    <Paperclip className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+                  </button>
+                  <button className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
+                    <Image className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+                  </button>
+                  <div className="flex-1" />
+                  <button className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
+                    <Mic className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+                  </button>
+                </div>
+
+                {/* 文本输入区 */}
+                <div className="relative flex items-start gap-3 px-4 pb-4">
+                  <div className="flex-1 relative">
+                    {/* 镜像层 - 必须与 textarea 在同一容器内 */}
+                    <div
+                      ref={mirrorRef}
+                      id="caret-mirror"
+                      style={{
+                        position: 'absolute',
+                        visibility: 'hidden',
+                        zIndex: -1,
+                        overflow: 'hidden',
+                        top: 0,
+                        left: 0,
+                        pointerEvents: 'none',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}
+                    />
+                    <textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={(e) => {
+                        setInput(e.target.value)
+                        // updateCaret 由 useEffect 监听 input 变化自动触发
+                      }}
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                      onClick={updateCaret}
+                      onKeyUp={updateCaret}
+                      onSelect={updateCaret}
+                      onScroll={updateCaret}
+                      onKeyDown={(e) => {
+                        updateCaret()
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSend()
+                        }
+                      }}
+                      placeholder="输入消息..."
+                      className="custom-caret-textarea w-full bg-transparent resize-none outline-none text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] dark:placeholder-[#636366] min-h-[24px] max-h-60 leading-relaxed py-2 overflow-y-auto block"
+                      style={{ height: 'auto' }}
+                    />
+
+                    {/* 自定义光标组件 - 相对于 textarea 容器 */}
+                    {caretVisible && (
+                      <div
+                        className={`comet-caret absolute pointer-events-none ${isTyping ? 'typing' : ''}`}
+                        data-direction={moveDirectionRef.current > 0 ? '1' : '-1'}
+                        style={{
+                          transform: `translate(${targetPosRef.current.x}px, ${targetPosRef.current.y}px)`,
+                        }}
+                      >
+                        <div className={`comet-tail ${tailActive ? 'active' : ''}`} />
+                        {tailActive && [...Array(4)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="comet-particle"
+                            style={{
+                              '--particle-offset': `${(i + 1) * 10 + 8}px`,
+                              width: `${6 - i}px`,
+                              height: `${6 - i}px`,
+                              opacity: 0.6 - i * 0.12,
+                              animation: `particle-fade 0.4s ease-out ${i * 0.03}s both`,
+                            }}
+                          />
+                        ))}
+                        <div className="comet-caret-main" style={{ height: `${caretHeight}px` }}>
+                          <div className="comet-caret-glow" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    className={`p-3 rounded-2xl transition-all duration-200 active:scale-95 self-end shrink-0 ${
+                      input.trim()
+                        ? 'bg-[#95C0EC] text-white hover:bg-[#7aaddd] dark:hover:bg-[#b0d4f0] shadow-lg shadow-[#95C0EC]/25'
+                        : 'bg-[#e5e5ea] dark:bg-[#3a3a3c] text-[#86868b] dark:text-[#636366] cursor-not-allowed'
+                    }`}
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* 文本输入区 */}
-              <div className="flex items-end gap-2 px-3 py-2">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value)
-                    setTimeout(updateCaret, 0)
-                  }}
-                  onFocus={handleInputFocus}
-                  onBlur={handleInputBlur}
-                  onClick={updateCaret}
-                  onKeyUp={updateCaret}
-                  onSelect={updateCaret}
-                  onKeyDown={(e) => {
-                    updateCaret()
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSend()
-                    }
-                  }}
-                  placeholder="输入消息... (⌘Enter 发送)"
-                  className="custom-caret-textarea flex-1 bg-transparent resize-none outline-none text-[15px] text-[#1d1d1f] placeholder-[#86868b] min-h-[24px] max-h-48 leading-relaxed py-1"
-                  rows={1}
-                  style={{ fieldSizing: 'content' }}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim()}
-                  className={`p-2 rounded-lg transition-all active:scale-95 ${
-                    input.trim()
-                      ? 'bg-[#95C0EC] text-white hover:bg-[#7aaddd]'
-                      : 'bg-[#e5e5ea] text-[#86868b] cursor-not-allowed'
-                  }`}
-                >
-                  <Send className="w-4 h-4" />
+              {/* 提示文本 */}
+              <div className="flex items-center justify-center gap-3 mt-3">
+                <p className="text-[12px] text-[#86868b] dark:text-[#636366]">
+                  AI 可能产生错误，请核实重要信息
+                </p>
+                <span className="text-[#d1d1d6] dark:text-[#4a4a4c]">·</span>
+                <button className="text-[12px] text-[#95C0EC] hover:underline">
+                  查看快捷键
                 </button>
               </div>
-            </div>
-
-            {/* 提示文本 */}
-            <div className="flex items-center justify-center gap-3 mt-2">
-              <p className="text-[12px] text-[#86868b]">
-                AI 可能产生错误，请核实重要信息
-              </p>
-              <span className="text-[#86868b]">·</span>
-              <button className="text-[12px] text-[#95C0EC] hover:underline">
-                查看快捷键
-              </button>
             </div>
           </div>
 
-          {/* 展开工具面板 - 响应式修复 */}
+          {/* 展开工具面板 - macOS 风格 */}
           {showTools && (
-            <div className="absolute bottom-24 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto bg-white rounded-xl shadow-xl border border-black/10 p-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="absolute bottom-28 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/10 dark:shadow-black/30 p-3 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
               <button
                 onClick={() => setShowTools(false)}
-                className="absolute top-2 right-2 p-1 hover:bg-black/[0.03] rounded-lg transition-colors"
+                className="absolute top-3 right-3 p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
               >
-                <X className="w-4 h-4 text-[#86868b]" />
+                <X className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
               </button>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                 {toolItems.map((item) => (
                   <button
                     key={item.label}
-                    className="flex flex-col items-center gap-1 px-3 py-2.5 sm:px-4 rounded-lg hover:bg-black/[0.03] transition-colors"
+                    className="flex flex-col items-center gap-2 px-4 py-3 sm:px-5 rounded-2xl hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
                   >
                     <item.icon className="w-5 h-5 text-[#95C0EC]" />
-                    <span className="text-[11px] sm:text-[12px] text-[#1d1d1f]">{item.label}</span>
-                    <span className="text-[9px] sm:text-[10px] text-[#86868b] hidden sm:inline">{item.shortcut}</span>
+                    <span className="text-[12px] text-[#1d1d1f] dark:text-[#f5f5f7]">{item.label}</span>
+                    <span className="text-[10px] text-[#86868b] dark:text-[#636366] hidden sm:inline">{item.shortcut}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
         </main>
-      </div>
-    </>
+    </div>
   )
 }
 
