@@ -71,33 +71,33 @@ export default function InputArea({
 
   return (
     <>
-      {/* 输入区域 - 带 Bard 风格的渐变遮罩，移动端适配 */}
-      <div className="input-gradient relative px-3 sm:px-4 pb-4 sm:pb-6">
+      {/* 输入区域 - 桌面应用优化 */}
+      <div className="input-gradient relative px-2.5 sm:px-4 pb-3 sm:pb-6">
         <div className="max-w-3xl mx-auto relative z-10">
-          {/* 悬浮输入框 */}
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
-            {/* 工具栏 - 移动端简化布局 */}
-            <div className="flex items-center gap-1 px-3 py-2.5 sm:px-4 sm:py-3">
+          {/* 悬浮输入框 - 桌面应用优化 */}
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl shadow-xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
+            {/* 工具栏 - 桌面应用优化 */}
+            <div className="flex items-center gap-1 px-2.5 py-2 sm:px-4 sm:py-2.5">
               <button
                 onClick={() => setShowTools(!showTools)}
-                className="p-2.5 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
+                className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
               >
-                <Plus className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+                <Plus className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
               </button>
-              <button className="p-2.5 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
-                <Paperclip className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+              <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
+                <Paperclip className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
               </button>
-              <button className="p-2.5 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
-                <Image className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+              <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
+                <Image className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
               </button>
               <div className="flex-1" />
-              <button className="p-2.5 sm:p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
-                <Mic className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+              <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
+                <Mic className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
               </button>
             </div>
 
-            {/* 文本输入区 - 移动端优化 */}
-            <div className="relative flex items-start gap-2 sm:gap-3 px-3 pb-3 sm:px-4 sm:pb-4">
+            {/* 文本输入区 - 桌面应用优化 */}
+            <div className="relative flex items-start gap-2 px-2.5 pb-2.5 sm:px-4 sm:pb-3">
               <div className="flex-1 relative">
                 {/* 镜像层 */}
                 <div
@@ -133,7 +133,7 @@ export default function InputArea({
                     }
                   }}
                   placeholder="输入消息..."
-                  className="custom-caret-textarea w-full bg-transparent resize-none outline-none text-[15px] sm:text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] dark:placeholder-[#636366] min-h-[28px] sm:min-h-[24px] max-h-40 sm:max-h-60 leading-relaxed py-2 overflow-y-auto block"
+                  className="custom-caret-textarea w-full bg-transparent resize-none outline-none text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] dark:placeholder-[#636366] min-h-[24px] max-h-36 leading-relaxed py-1.5 overflow-y-auto block"
                   style={{ height: "auto" }}
                 />
 
@@ -181,14 +181,14 @@ export default function InputArea({
               <button
                 onClick={onSend}
                 disabled={!input.trim()}
-                className={`p-2.5 sm:p-3 rounded-2xl transition-all duration-200 active:scale-95 self-end shrink-0 ${
+                className={`p-2 rounded-xl transition-all duration-200 active:scale-95 self-end shrink-0 ${
                   input.trim()
                     ? "bg-[#95C0EC] text-white hover:bg-[#7aaddd] dark:hover:bg-[#b0d4f0] shadow-lg shadow-[#95C0EC]/25"
                     : "bg-[#e5e5ea] dark:bg-[#3a3a3c] text-[#86868b] dark:text-[#636366] cursor-not-allowed"
                 }`}
               >
                 <svg
-                  className="w-4 h-4"
+                  className="w-3.5 h-3.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -204,36 +204,36 @@ export default function InputArea({
             </div>
           </div>
 
-          {/* 提示文本 - 移动端隐藏或简化 */}
-          <div className="hidden sm:flex items-center justify-center gap-3 mt-2">
-            <p className="text-[12px] text-[#86868b] dark:text-[#636366]">
+          {/* 提示文本 - 桌面应用优化 */}
+          <div className="hidden sm:flex items-center justify-center gap-2 mt-1.5">
+            <p className="text-[11px] text-[#86868b] dark:text-[#636366]">
               AI 可能产生错误，请核实重要信息
             </p>
             <span className="text-[#d1d1d6] dark:text-[#4a4a4c]">·</span>
-            <button className="text-[12px] text-[#95C0EC] hover:underline">
+            <button className="text-[11px] text-[#95C0EC] hover:underline">
               查看快捷键
             </button>
           </div>
         </div>
       </div>
 
-      {/* 展开工具面板 - 移动端优化 */}
+      {/* 展开工具面板 - 桌面应用优化 */}
       {showTools && (
-        <div className="tools-panel fixed bottom-20 sm:bottom-28 left-2 right-2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/10 dark:shadow-black/30 p-2 sm:p-3 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="tools-panel fixed bottom-16 sm:bottom-28 left-2 right-2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/30 p-2 sm:p-3 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <button
             onClick={() => setShowTools(false)}
-            className="absolute top-2 right-2 sm:top-3 sm:right-3 p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
+            className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
           >
-            <X className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+            <X className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
           </button>
-          <div className="grid grid-cols-4 sm:grid-cols-4 gap-1">
+          <div className="grid grid-cols-4 gap-1">
             {toolItems.map((item) => (
               <button
                 key={item.label}
-                className="flex flex-col items-center gap-1.5 sm:gap-2 px-2 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+                className="flex flex-col items-center gap-1 px-2 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
               >
-                <item.icon className="w-5 h-5 text-[#95C0EC]" />
-                <span className="text-[10px] sm:text-[12px] text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <item.icon className="w-4 h-4 text-[#95C0EC]" />
+                <span className="text-[10px] text-[#1d1d1f] dark:text-[#f5f5f7]">
                   {item.label}
                 </span>
               </button>

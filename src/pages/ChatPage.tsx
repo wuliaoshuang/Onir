@@ -333,39 +333,39 @@ function ChatPage() {
 
   return (
     <div className="flex-1 h-dvh flex flex-col min-w-0 relative">
-      {/* 顶部栏 */}
-      <header className="h-14 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-30">
-        <div className="flex items-center gap-3">
+      {/* 顶部栏 - 桌面应用优化高度 */}
+      <header className="h-11 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex items-center justify-between px-4 sticky top-0 z-1">
+        <div className="flex items-center gap-2">
           <button
-            className="lg:hidden p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
+            className="md:hidden p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
             onClick={() => useUIStore.getState().setMobileSidebarOpen(true)}
           >
-            <Menu className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
+            <Menu className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
           </button>
-          <h2 className="text-[16px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+          <h2 className="text-[14px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
             新对话
           </h2>
         </div>
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <button className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200">
-            <Ellipsis className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
+          <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
+            <Ellipsis className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
           </button>
         </div>
       </header>
 
-      {/* 消息区域 */}
+      {/* 消息区域 - 桌面应用优化宽度 */}
       <div className="flex-1 overflow-y-auto bg-[#f5f5f7] dark:bg-black">
-        <div className="py-6 max-w-3xl mx-auto px-4">
+        <div className="py-2 max-w-3xl mx-auto px-4">
           {messages.map((message) => (
             <div
               key={message.id}
               className={`group ${
-                message.role === "user" ? "flex justify-end py-3" : "py-4"
+                message.role === "user" ? "flex justify-end py-2" : "py-3"
               }`}
             >
               {message.role === "assistant" && (
-                <div className="flex-1 relative pb-8">
+                <div className="flex-1 relative pb-6">
                   <div className="prose prose-sm max-w-none">
                     <MessageContent content={message.content} />
                   </div>
@@ -378,9 +378,9 @@ function ChatPage() {
                       title="复制"
                     >
                       {copiedMessageId === message.id ? (
-                        <Check className="w-4 h-4 text-[#95C0EC]" />
+                        <Check className="w-3.5 h-3.5 text-[#95C0EC]" />
                       ) : (
-                        <Copy className="w-4 h-4" />
+                        <Copy className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
@@ -389,24 +389,24 @@ function ChatPage() {
 
               {message.role === "user" && (
                 <div className="flex justify-end">
-                  <div className="relative group/bubble max-w-xl">
-                    <div className="px-5 py-3 bg-[#95C0EC] text-white rounded-2xl rounded-br-md shadow-lg shadow-[#95C0EC]/20">
+                  <div className="relative group/bubble max-w-md">
+                    <div className="px-4 py-2.5 bg-[#95C0EC] text-white rounded-xl rounded-br-md shadow-lg shadow-[#95C0EC]/20">
                       <div className="prose prose-sm max-w-none prose-p:text-white prose-invert">
                         <MessageContent content={message.content} />
                       </div>
                     </div>
-                    <div className="absolute -bottom-8 right-0 flex items-center gap-1 opacity-0 group-hover/bubble:opacity-100 transition-opacity">
+                    <div className="absolute -bottom-6 right-0 flex items-center gap-1 opacity-0 group-hover/bubble:opacity-100 transition-opacity">
                       <button
                         onClick={() =>
                           handleCopyMessage(message.id, message.content)
                         }
-                        className="p-1.5 bg-white dark:bg-[#1c1c1e] rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 shadow-sm"
+                        className="p-1 bg-white dark:bg-[#1c1c1e] rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 shadow-sm"
                         title="复制"
                       >
                         {copiedMessageId === message.id ? (
-                          <Check className="w-3.5 h-3.5 text-[#95C0EC]" />
+                          <Check className="w-3 h-3 text-[#95C0EC]" />
                         ) : (
-                          <Copy className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+                          <Copy className="w-3 h-3 text-[#86868b] dark:text-[#8e8e93]" />
                         )}
                       </button>
                     </div>

@@ -244,7 +244,7 @@ function ChatListPage() {
       <header className="h-14 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex items-center justify-between px-4 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
         <div className="flex items-center gap-3">
           <button
-            className="lg:hidden p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all"
+            className="md:hidden p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all"
             onClick={() => setMobileChatSidebarOpen(true)}
           >
             <Menu className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
@@ -263,11 +263,11 @@ function ChatListPage() {
 
       {/* 主内容区域 */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 会话侧边栏 */}
+        {/* 会话侧边栏 - 桌面应用优化 */}
         <aside
           className={`
-            ${mobileChatSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-            fixed lg:relative h-full z-40 lg:z-0
+            ${mobileChatSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            fixed md:relative h-full z-40 md:z-0
             w-72 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl
             border-r border-[#e5e5ea] dark:border-[#3a3a3c]
             flex flex-col transition-transform duration-300
@@ -276,7 +276,7 @@ function ChatListPage() {
           {/* 移动端遮罩 */}
           {mobileChatSidebarOpen && (
             <div
-              className="fixed inset-0 bg-black/20 lg:hidden z-[-1]"
+              className="fixed inset-0 bg-black/20 md:hidden z-[-1]"
               onClick={() => setMobileChatSidebarOpen(false)}
             />
           )}

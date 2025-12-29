@@ -49,66 +49,66 @@ function SettingsPage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black">
-      {/* 顶部导航栏 */}
+      {/* 顶部导航栏 - 桌面应用优化 */}
       <PageHeader
         title="设置"
         showMenuButton={false}
         actions={
           <button
             onClick={() => navigate({ to: '/' })}
-            className="flex items-center gap-2 p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all duration-200"
+            className="flex items-center gap-2 p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
           >
-            <ArrowLeft className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
+            <ArrowLeft className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
           </button>
         }
       />
 
-      {/* 设置内容区域 */}
+      {/* 设置内容区域 - 桌面应用优化 */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* 用户卡片 */}
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 shadow-sm mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#95C0EC] to-[#7aaddd] flex items-center justify-center shadow-lg shadow-[#95C0EC]/30">
-                <span className="text-2xl text-white font-semibold">U</span>
+        <div className="max-w-3xl mx-auto px-3 py-6">
+          {/* 用户卡片 - 桌面应用优化 */}
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-4 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#95C0EC] to-[#7aaddd] flex items-center justify-center shadow-lg shadow-[#95C0EC]/30">
+                <span className="text-xl text-white font-semibold">U</span>
               </div>
               <div className="flex-1">
-                <h2 className="text-[20px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <h2 className="text-[16px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                   用户名
                 </h2>
-                <p className="text-[14px] text-[#86868b] dark:text-[#8e8e93]">
+                <p className="text-[13px] text-[#86868b] dark:text-[#8e8e93]">
                   user@example.com
                 </p>
               </div>
-              <button className="px-4 py-2 bg-black/5 dark:bg-white/10 rounded-xl text-[14px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/10 dark:hover:bg-white/15 transition-all duration-200">
+              <button className="px-3 py-1.5 bg-black/5 dark:bg-white/10 rounded-lg text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/10 dark:hover:bg-white/15 transition-all duration-200">
                 编辑
               </button>
             </div>
           </div>
 
-          {/* 设置分组 */}
-          <div className="space-y-4">
+          {/* 设置分组 - 桌面应用优化 */}
+          <div className="space-y-3">
             {settingsSections.map((section) => (
               <div
                 key={section.title}
-                className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#95C0EC]/10 flex items-center justify-center flex-shrink-0">
-                    <section.icon className="w-5 h-5 text-[#95C0EC]" />
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#95C0EC]/10 flex items-center justify-center flex-shrink-0">
+                    <section.icon className="w-4.5 h-4.5 text-[#95C0EC]" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-[16px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+                    <h3 className="text-[14px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
                       {section.title}
                     </h3>
-                    <p className="text-[13px] text-[#86868b] dark:text-[#8e8e93] mb-3">
+                    <p className="text-[12px] text-[#86868b] dark:text-[#8e8e93] mb-2">
                       {section.description}
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {section.items.map((item) => (
                         <button
                           key={item}
-                          className="px-3 py-1.5 text-[13px] bg-black/5 dark:bg-white/5 rounded-lg text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/10 dark:hover:bg-white/10 transition-all duration-200"
+                          className="px-2.5 py-1 text-[12px] bg-black/5 dark:bg-white/5 rounded-md text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/10 dark:hover:bg-white/10 transition-all duration-200"
                         >
                           {item}
                         </button>
@@ -120,9 +120,9 @@ function SettingsPage() {
             ))}
           </div>
 
-          {/* 底部信息 */}
-          <div className="mt-8 text-center">
-            <p className="text-[12px] text-[#86868b] dark:text-[#636366]">
+          {/* 底部信息 - 桌面应用优化 */}
+          <div className="mt-6 text-center">
+            <p className="text-[11px] text-[#86868b] dark:text-[#636366]">
               Assistant v1.0.0 · Made with ❤️ by 蕾姆
             </p>
           </div>
