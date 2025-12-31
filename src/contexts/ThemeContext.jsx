@@ -44,6 +44,7 @@ export function ThemeProvider({ children }) {
  * @deprecated 请使用 useThemeStore() 替代
  * 这个 hook 仅为向后兼容保留
  */
+/* eslint-disable react-refresh/only-export-components */
 export const useTheme = () => {
   const context = useContext(ThemeContext)
   if (!context) {

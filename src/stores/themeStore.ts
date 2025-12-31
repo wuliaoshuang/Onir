@@ -1,11 +1,13 @@
 /**
  * 蕾姆精心设计的主题状态管理 Store
  * 使用 Zustand + persist 中间件实现持久化
+ * ✨ 支持跨窗口主题同步
  */
 
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import type { ThemeMode } from '../config/theme'
+import { notifyThemeUpdated } from '../lib/crossWindowEvents'
 
 // ========================================
 // 类型定义
@@ -55,6 +57,9 @@ interface ThemeState extends ThemeSettings {
 
   // 初始化主题（检测系统主题）
   initTheme: () => void
+
+  // 从 localStorage 重新加载主题设置（用于跨窗口同步）
+  reloadFromStorage: () => void
 }
 
 // ========================================
@@ -153,11 +158,17 @@ export const useThemeStore = create<ThemeState>()(
           const resolved = resolveTheme(mode)
           set({ resolvedTheme: resolved })
           applyThemeToDOM(get().mode, get().accentColor, get().fontSize, get().animations, get().highRefresh)
+
+          // 蕾姆：通知所有窗口主题已更新
+          notifyThemeUpdated(mode).catch(err => console.error('发送主题更新事件失败:', err))
         },
 
         setAccentColor: (colorId) => {
           set({ accentColor: colorId })
           applyThemeToDOM(get().mode, colorId, get().fontSize, get().animations, get().highRefresh)
+
+          // 蕾姆：通知所有窗口主题已更新
+          notifyThemeUpdated(get().mode).catch(err => console.error('发送主题更新事件失败:', err))
         },
 
         setFontSize: (size) => {
@@ -165,28 +176,43 @@ export const useThemeStore = create<ThemeState>()(
           const clampedSize = Math.max(12, Math.min(20, size))
           set({ fontSize: clampedSize })
           applyThemeToDOM(get().mode, get().accentColor, clampedSize, get().animations, get().highRefresh)
+
+          // 蕾姆：通知所有窗口主题已更新
+          notifyThemeUpdated(get().mode).catch(err => console.error('发送主题更新事件失败:', err))
         },
 
         toggleAnimations: () => {
           const newState = !get().animations
           set({ animations: newState })
           applyThemeToDOM(get().mode, get().accentColor, get().fontSize, newState, get().highRefresh)
+
+          // 蕾姆：通知所有窗口主题已更新
+          notifyThemeUpdated(get().mode).catch(err => console.error('发送主题更新事件失败:', err))
         },
 
         setAnimations: (enabled) => {
           set({ animations: enabled })
           applyThemeToDOM(get().mode, get().accentColor, get().fontSize, enabled, get().highRefresh)
+
+          // 蕾姆：通知所有窗口主题已更新
+          notifyThemeUpdated(get().mode).catch(err => console.error('发送主题更新事件失败:', err))
         },
 
         toggleHighRefresh: () => {
           const newState = !get().highRefresh
           set({ highRefresh: newState })
           applyThemeToDOM(get().mode, get().accentColor, get().fontSize, get().animations, newState)
+
+          // 蕾姆：通知所有窗口主题已更新
+          notifyThemeUpdated(get().mode).catch(err => console.error('发送主题更新事件失败:', err))
         },
 
         setHighRefresh: (enabled) => {
           set({ highRefresh: enabled })
           applyThemeToDOM(get().mode, get().accentColor, get().fontSize, get().animations, enabled)
+
+          // 蕾姆：通知所有窗口主题已更新
+          notifyThemeUpdated(get().mode).catch(err => console.error('发送主题更新事件失败:', err))
         },
 
         resetSettings: () => {
@@ -207,6 +233,39 @@ export const useThemeStore = create<ThemeState>()(
           const resolved = resolveTheme(state.mode)
           set({ resolvedTheme: resolved })
           applyThemeToDOM(state.mode, state.accentColor, state.fontSize, state.animations, state.highRefresh)
+        },
+
+        // 蕾姆：从 localStorage 重新加载主题设置（用于跨窗口同步）
+        reloadFromStorage: () => {
+          // 从 localStorage 读取最新设置
+          const storageKey = 'onir-theme-storage'
+          const storedData = localStorage.getItem(storageKey)
+
+          if (storedData) {
+            try {
+              const parsed = JSON.parse(storedData)
+              const state = parsed.state
+
+              if (state) {
+                // 更新 store 的 state
+                set({
+                  mode: state.mode,
+                  accentColor: state.accentColor,
+                  fontSize: state.fontSize,
+                  animations: state.animations,
+                  highRefresh: state.highRefresh,
+                  resolvedTheme: resolveTheme(state.mode),
+                })
+
+                // 应用到 DOM
+                applyThemeToDOM(state.mode, state.accentColor, state.fontSize, state.animations, state.highRefresh)
+
+                console.log('🔄 蕾姆：已从 localStorage 重新加载主题设置', state)
+              }
+            } catch (error) {
+              console.error('❌ 蕾姆：从 localStorage 加载主题设置失败', error)
+            }
+          }
         },
       }),
       {

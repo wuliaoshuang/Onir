@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { MessageContent } from '../components/MessageContent'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { Button } from '../components/ui/Button'
 import { useChatStore, selectActiveMessages } from '../stores/chatStore'
 import { useUIStore } from '../stores/uiStore'
 
@@ -243,21 +244,19 @@ function ChatListPage() {
       {/* 顶部栏 */}
       <header className="h-14 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex items-center justify-between px-4 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
         <div className="flex items-center gap-3">
-          <button
-            className="md:hidden p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all"
+          <Button
+            variant="icon"
+            icon={Menu}
+            className="md:hidden"
             onClick={() => setMobileChatSidebarOpen(true)}
-          >
-            <Menu className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
-          </button>
+          />
           <h1 className="text-[16px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
             {activeConv?.title || '新对话'}
           </h1>
         </div>
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl transition-all">
-            <Ellipsis className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
-          </button>
+          <Button variant="icon" icon={Ellipsis} />
         </div>
       </header>
 
@@ -297,13 +296,15 @@ function ChatListPage() {
 
           {/* 新对话按钮 */}
           <div className="p-4">
-            <button
+            <Button
+              variant="primary"
+              size="md"
+              display="full-width"
+              icon={Plus}
               onClick={handleNewChat}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-500 text-white rounded-xl text-[14px] font-medium hover:bg-primary-600 dark:hover:bg-primary-400 transition-all shadow-lg shadow-primary-500/25"
             >
-              <Plus className="w-4 h-4" />
               新对话
-            </button>
+            </Button>
           </div>
 
           {/* 对话列表 */}
@@ -354,16 +355,12 @@ function ChatListPage() {
                         <MessageContent content={message.content} />
                       </div>
                       <div className="absolute bottom-0 left-0 flex items-center gap-1">
-                        <button
+                        <Button
+                          variant="icon"
+                          icon={copiedMessageId === message.id ? Check : Copy}
+                          className={copiedMessageId === message.id ? 'text-primary-500' : ''}
                           onClick={() => copyToClipboard(message.content, message.id)}
-                          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all text-[#86868b] dark:text-[#8e8e93]"
-                        >
-                          {copiedMessageId === message.id ? (
-                            <Check className="w-4 h-4 text-primary-500" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </button>
+                        />
                       </div>
                     </div>
                   )}
@@ -377,16 +374,12 @@ function ChatListPage() {
                           </div>
                         </div>
                         <div className="absolute -bottom-8 right-0 flex items-center gap-1 opacity-0 group-hover/bubble:opacity-100 transition-opacity">
-                          <button
+                          <Button
+                            variant="icon"
+                            icon={copiedMessageId === message.id ? Check : Copy}
+                            className="bg-white dark:bg-[#1c1c1e] shadow-sm"
                             onClick={() => copyToClipboard(message.content, message.id)}
-                            className="p-1.5 bg-white dark:bg-[#1c1c1e] rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all shadow-sm"
-                          >
-                            {copiedMessageId === message.id ? (
-                              <Check className="w-3.5 h-3.5 text-primary-500" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
-                            )}
-                          </button>
+                          />
                         </div>
                       </div>
                     </div>
@@ -468,17 +461,18 @@ function ChatListPage() {
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={handleSend}
+                  <Button
+                    variant={input.trim() ? 'primary' : 'secondary'}
+                    size="lg"
+                    icon={Send}
                     disabled={!input.trim()}
-                    className={`p-3 rounded-2xl transition-all duration-200 active:scale-95 self-end shrink-0 ${
+                    className={
                       input.trim()
-                        ? 'bg-primary-500 text-white hover:bg-primary-600 dark:hover:bg-primary-400 shadow-lg shadow-primary-500/25'
-                        : 'bg-[#e5e5ea] dark:bg-[#3a3a3c] text-[#86868b] dark:text-[#636366] cursor-not-allowed'
-                    }`}
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
+                        ? ''
+                        : 'bg-[#e5e5ea] dark:bg-[#3a3a3c] text-[#86868b] dark:text-[#636366] cursor-not-allowed hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c]'
+                    }
+                    onClick={handleSend}
+                  />
                 </div>
               </div>
 

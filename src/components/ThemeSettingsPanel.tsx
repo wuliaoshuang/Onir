@@ -6,6 +6,7 @@
 import React, { useState } from 'react'
 import { Monitor, Moon, Sun, Palette, Type, Zap, Sparkles } from 'lucide-react'
 import { useThemeStore } from '../stores/themeStore'
+import { Toggle } from './ui/Toggle'
 import { ACCENT_COLORS, THEME_MODES, FONT_SIZE_MIN, FONT_SIZE_MAX } from '../config/theme'
 
 export function ThemeSettingsPanel() {
@@ -205,21 +206,11 @@ export function ThemeSettingsPanel() {
             </div>
           </div>
           {/* 切换开关 */}
-          <button
-            onClick={toggleAnimations}
-            className={`
-              relative w-14 h-8 rounded-full transition-all duration-200
-              ${animations ? 'bg-[--primary]' : 'bg-[--border]'}
-            `}
-          >
-            <div
-              className={`
-                absolute top-1 w-6 h-6 rounded-full bg-white shadow-md
-                transition-all duration-200
-                ${animations ? 'left-7' : 'left-1'}
-              `}
-            />
-          </button>
+          <Toggle
+            size="md"
+            checked={animations}
+            onChange={toggleAnimations}
+          />
         </div>
       </section>
 
@@ -236,21 +227,11 @@ export function ThemeSettingsPanel() {
             </div>
           </div>
           {/* 切换开关 */}
-          <button
-            onClick={toggleHighRefresh}
-            className={`
-              relative w-14 h-8 rounded-full transition-all duration-200
-              ${highRefresh ? 'bg-[--primary]' : 'bg-[--border]'}
-            `}
-          >
-            <div
-              className={`
-                absolute top-1 w-6 h-6 rounded-full bg-white shadow-md
-                transition-all duration-200
-                ${highRefresh ? 'left-7' : 'left-1'}
-              `}
-            />
-          </button>
+          <Toggle
+            size="md"
+            checked={highRefresh}
+            onChange={toggleHighRefresh}
+          />
         </div>
       </section>
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { Toggle } from "../components/ui/Toggle";
 import { useThemeStore } from "../stores/themeStore";
 import { useState } from "react";
 
@@ -78,8 +79,8 @@ function UIPage() {
     setThemeMode,
     setAccentColor,
     setFontSize,
-    toggleAnimations,
-    toggleHighRefresh,
+    setAnimations,
+    setHighRefresh,
   } = useThemeStore();
 
   // ✅ 保留纯 UI 状态
@@ -153,7 +154,7 @@ function UIPage() {
       />
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-4 space-y-4">
+        <div className="max-w-full mx-auto p-4 space-y-4">
           {/* 主题选择 */}
           <div>
             <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
@@ -301,39 +302,9 @@ function UIPage() {
               />
               <div className="flex justify-between text-[11px] text-[#86868b] dark:text-[#8e8e93] mt-2 px-1">
                 <span>小 (12px)</span>
-                <span>标准 (14px)</span>
+                <span>标准 (16px)</span>
                 <span>大 (20px)</span>
               </div>
-            </div>
-          </div>
-
-          {/* 语言和地区 */}
-          <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
-              语言和地区
-            </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
-              <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#f5f5f7] dark:bg-black flex items-center justify-center">
-                    <Type className={`w-5 h-5 ${colorClass.text}`} />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
-                      显示语言
-                    </h3>
-                    <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
-                      简体中文
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 ${colorClass.bgLight} ${colorClass.text} rounded-lg text-[11px] font-medium`}>
-                    默认
-                  </span>
-                  <Palette className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93] group-hover:translate-x-1 transition-transform duration-200" />
-                </div>
-              </button>
             </div>
           </div>
 
@@ -357,18 +328,11 @@ function UIPage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={toggleAnimations}
-                  className={`w-11 h-6 rounded-full relative transition-all duration-200 ${
-                    animations
-                      ? colorClass.bg
-                      : 'bg-[#e5e5ea] dark:bg-[#3a3a3c]'
-                  }`}
-                >
-                  <span className={`absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    animations ? 'translate-x-5' : 'translate-x-0'
-                  }`} />
-                </button>
+                <Toggle
+                  size="sm"
+                  checked={animations}
+                  onChange={setAnimations}
+                />
               </div>
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3">
@@ -384,18 +348,11 @@ function UIPage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={toggleHighRefresh}
-                  className={`w-11 h-6 rounded-full relative transition-all duration-200 ${
-                    highRefresh
-                      ? colorClass.bg
-                      : 'bg-[#e5e5ea] dark:bg-[#3a3a3c]'
-                  }`}
-                >
-                  <span className={`absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    highRefresh ? 'translate-x-5' : 'translate-x-0'
-                  }`} />
-                </button>
+                <Toggle
+                  size="sm"
+                  checked={highRefresh}
+                  onChange={setHighRefresh}
+                />
               </div>
             </div>
           </div>

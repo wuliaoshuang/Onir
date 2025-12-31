@@ -45,6 +45,14 @@ interface ChatState {
   // 快捷操作配置
   quickActions: QuickAction[]
 
+  // ========== 流式消息状态（新增） ==========
+
+  // 当前正在流式传输的消息 ID
+  streamingMessageId: number | null
+
+  // 是否正在生成
+  isGenerating: boolean
+
   // ========== Actions ==========
 
   // 创建新对话
@@ -70,6 +78,20 @@ interface ChatState {
 
   // 清空所有对话
   clearAll: () => void
+
+  // ========== 流式消息 Actions（新增） ==========
+
+  // 开始流式消息
+  startStreamingMessage: () => number
+
+  // 更新流式内容
+  updateStreamingContent: (messageId: number, content: string) => void
+
+  // 完成流式消息
+  completeStreamingMessage: (messageId: number) => void
+
+  // 中断生成
+  abortGeneration: () => void
 }
 
 // ========================================
@@ -140,6 +162,10 @@ function greet(name) {
           { id: 'image', label: '图像分析', icon: 'Image', prompt: '请分析这张图片：' },
           { id: 'doc', label: '文档总结', icon: 'FileText', prompt: '请总结以下文档：' },
         ],
+
+        // ========== 流式消息 Initial State（新增） ==========
+        streamingMessageId: null,
+        isGenerating: false,
 
         // ========== Actions ==========
 
@@ -232,6 +258,83 @@ function greet(name) {
           set({
             conversations: [],
             activeConversationId: null,
+          })
+        },
+
+        // ========== 流式消息 Actions（新增） ==========
+
+        /**
+         * 开始流式消息
+         * 创建一个空的助手消息并返回消息 ID
+         */
+        startStreamingMessage: () => {
+          const { activeConversationId } = get()
+          if (!activeConversationId) {
+            throw new Error('没有激活的对话')
+          }
+
+          const newMessage: Message = {
+            id: Date.now(),
+            role: 'assistant',
+            content: '',
+            timestamp: Date.now(),
+          }
+
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.id === activeConversationId
+                ? {
+                    ...c,
+                    messages: [...c.messages, newMessage],
+                    updatedAt: Date.now(),
+                  }
+                : c
+            ),
+            streamingMessageId: newMessage.id,
+            isGenerating: true,
+          }))
+
+          return newMessage.id
+        },
+
+        /**
+         * 更新流式消息内容
+         */
+        updateStreamingContent: (messageId: number, content: string) => {
+          const { activeConversationId } = get()
+          if (!activeConversationId) return
+
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.id === activeConversationId
+                ? {
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === messageId ? { ...m, content } : m
+                    ),
+                  }
+                : c
+            ),
+          }))
+        },
+
+        /**
+         * 完成流式消息
+         */
+        completeStreamingMessage: (messageId: number) => {
+          set((state) => ({
+            streamingMessageId: null,
+            isGenerating: false,
+          }))
+        },
+
+        /**
+         * 中断生成
+         */
+        abortGeneration: () => {
+          set({
+            streamingMessageId: null,
+            isGenerating: false,
           })
         },
       }),

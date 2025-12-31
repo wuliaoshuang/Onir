@@ -1,8 +1,10 @@
 /**
  * 蕾姆精心设计的侧边栏组件
  * 桌面应用优化 - 与 MainSidebar 尺寸保持一致
+ * 支持双窗口架构：设置按钮打开独立设置窗口（Electron 版本已实现）
  */
 import { useNavigate } from "@tanstack/react-router";
+// import { invoke } from "@tauri-apps/api/core"; // 蕾姆：已移除 Tauri 依赖
 import {
   Plus,
   Code,
@@ -15,6 +17,17 @@ import {
 } from "lucide-react";
 import { useUIStore } from "../stores/uiStore";
 import { useChatStore } from "../stores/chatStore";
+
+// 蕾姆：声明 Electron API 类型
+declare global {
+  interface Window {
+    electronAPI?: {
+      getPlatform: () => string;
+      openSettingsWindow: () => void;
+      closeSettingsWindow: () => void;
+    };
+  }
+}
 
 // 快捷操作配置
 const quickActions = [
@@ -48,7 +61,13 @@ export default function Sidebar() {
   };
 
   const handleSettings = () => {
-    navigate({ to: "/settings" });
+    // 蕾姆：优先使用 Electron 多窗口架构
+    if (window.electronAPI?.openSettingsWindow) {
+      window.electronAPI.openSettingsWindow()
+    } else {
+      // 降级方案：使用路由导航（Web 版本）
+      navigate({ to: "/general-settings" })
+    }
   };
 
   return (
@@ -115,7 +134,7 @@ export default function Sidebar() {
               className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
               title="收起侧边栏"
             >
-              <PanelLeftClose className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+              <PanelLeftClose className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
             </button>
           </div>
         )}
@@ -164,7 +183,7 @@ export default function Sidebar() {
               onClick={handleNewConversation}
               className="flex items-center gap-2 w-full px-3 py-2 bg-primary-500 text-white rounded-lg text-[13px] font-medium hover:bg-primary-600 dark:hover:bg-primary-600 active:scale-[0.97] transition-all duration-200 shadow-lg shadow-primary-500/25"
             >
-              <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+              <Plus className="w-4 h-4 flex-shrink-0" />
               <span>新对话</span>
             </button>
           </div>
@@ -180,7 +199,7 @@ export default function Sidebar() {
                   key={action.label}
                   className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
                 >
-                  <action.icon className="w-3.5 h-3.5 text-primary-500" />
+                  <action.icon className="w-4 h-4 text-primary-500" />
                   <span>{action.label}</span>
                 </button>
               ))}
@@ -203,7 +222,7 @@ export default function Sidebar() {
                       : "text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10"
                   }`}
                 >
-                  <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                  <MessageSquare className="w-4 h-4 flex-shrink-0" />
                   <span className="truncate">{conv.title}</span>
                 </button>
               ))}
@@ -216,7 +235,7 @@ export default function Sidebar() {
               onClick={handleSettings}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
             >
-              <Settings className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+              <Settings className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
               <span>设置</span>
             </button>
           </div>

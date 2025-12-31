@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Send,
   Plus,
@@ -21,6 +21,7 @@ import {
 import { MessageContent } from "./components/MessageContent";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useThemeStore } from "./stores/themeStore";
+import { Button } from "./components/ui/Button";
 
 function App() {
   // ========================================
@@ -103,7 +104,6 @@ function greet(name) {
   const [tailActive, setTailActive] = useState(false);
   const [isTyping, setIsTyping] = useState(false); // 输入状态，用于暂停闪烁
   const [caretHeight, setCaretHeight] = useState(22); // 动态光标高度
-  const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 });
   const textareaRef = useRef(null);
   const mirrorRef = useRef(null);
   const lastPosRef = useRef({ x: 0, y: 0 });
@@ -111,9 +111,9 @@ function greet(name) {
   const typingTimeoutRef = useRef(null); // 输入后恢复闪烁的定时器
   const focusCooldownRef = useRef(false); // 聚焦冷却期，禁用拖尾
 
-  // 目标位置（相对于容器）
-  const targetPosRef = useRef({ x: 0, y: 0 });
-  const moveDirectionRef = useRef(1); // 移动方向：1=向右，-1=向左
+  // 目标位置（相对于容器）- 使用 state 以避免在渲染期间访问 ref
+  const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
+  const [moveDirection, setMoveDirection] = useState(1); // 移动方向：1=向右，-1=向左
 
   // 同步 mirror 样式
   const syncMirrorStyle = () => {
@@ -175,7 +175,7 @@ function greet(name) {
   };
 
   // 检查光标是否在可视区域内
-  const isCaretVisible = (rawX, rawY) => {
+  const isCaretVisible = useCallback((rawX, rawY) => {
     const textarea = textareaRef.current;
     if (!textarea) return true;
 
@@ -218,10 +218,10 @@ function greet(name) {
       caretLeft < viewportRight - tolerance;
 
     return inContentY && inContentX && isVisibleY && isVisibleX;
-  };
+  }, [caretHeight]);
 
   // 获取光标位置（使用纯 offsetLeft/offsetTop 方案 - 更可靠）
-  const getCaretPosition = () => {
+  const getCaretPosition = useCallback(() => {
     const textarea = textareaRef.current;
     const mirror = mirrorRef.current;
     if (!textarea || !mirror)
@@ -289,7 +289,7 @@ function greet(name) {
     mirror.removeChild(span);
 
     return { x, y, height, rawX, rawY };
-  };
+  }, []);
 
   // 自动增高 textarea
   const autoGrowTextarea = () => {
@@ -305,7 +305,7 @@ function greet(name) {
   };
 
   // 更新光标位置
-  const updateCaret = (isInputEvent = false, enableTail = true) => {
+  const updateCaret = useCallback((isInputEvent = false, enableTail = true) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -314,9 +314,9 @@ function greet(name) {
     // 计算移动方向（用于尾巴方向）
     const dx = pos.x - lastPosRef.current.x;
     if (dx > 0.5) {
-      moveDirectionRef.current = 1;
+      setMoveDirection(1);
     } else if (dx < -0.5) {
-      moveDirectionRef.current = -1;
+      setMoveDirection(-1);
     }
 
     const dy = pos.y - lastPosRef.current.y;
@@ -332,10 +332,10 @@ function greet(name) {
     lastPosRef.current = pos;
 
     // 直接设置目标位置（相对于容器）
-    targetPosRef.current = {
+    setTargetPos({
       x: pos.x,
       y: pos.y,
-    };
+    });
 
     // 输入时暂停闪烁
     if (isInputEvent) {
@@ -345,15 +345,12 @@ function greet(name) {
       typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 800);
     }
 
-    // 触发重渲染来更新光标位置
-    setCaretPosition(pos);
-
     // 【关键】只有聚焦时且光标在可视区域内才显示光标
     if (isFocused) {
       const visible = isCaretVisible(pos.rawX, pos.rawY);
       setCaretVisible(visible);
     }
-  };
+  }, [isFocused, getCaretPosition, isCaretVisible]);
 
   // 初始化和窗口变化时同步样式
   useEffect(() => {
@@ -370,10 +367,13 @@ function greet(name) {
     };
   }, []);
 
-  // 监听输入变化
+  // 监听输入变化 - 延迟执行以确保 DOM 已更新
   useEffect(() => {
-    updateCaret(true); // 输入变化时标记为输入事件
-  }, [input]);
+    const timeoutId = setTimeout(() => {
+      updateCaret(true); // 输入变化时标记为输入事件
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [input, updateCaret]);
 
   // 监听 input 变化来自动增高 textarea
   useEffect(() => {
@@ -398,8 +398,7 @@ function greet(name) {
     const pos = getCaretPosition();
     lastPosRef.current = pos;
     // 直接设置位置，不通过 updateCaret（避免重复获取位置）
-    targetPosRef.current = { x: pos.x, y: pos.y };
-    setCaretPosition(pos);
+    setTargetPos({ x: pos.x, y: pos.y });
     setCaretHeight(pos.height);
 
     // 【关键】聚焦时也检查光标是否在可视区域内
@@ -561,21 +560,32 @@ function greet(name) {
             ))}
 
             {/* 底部设置 */}
-            <button className="group/btn relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 mt-auto">
-              <Settings className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
-              <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[12px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            <div className="group/btn relative">
+              <Button
+                variant="icon"
+                size="md"
+                icon={Settings}
+                aria-label="设置"
+                className="w-9 h-9 rounded-xl mt-auto"
+              />
+              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[12px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
                 设置
               </div>
-            </button>
+            </div>
           </div>
         ) : (
           <>
             {/* 展开状态：新对话按钮 */}
             <div className="px-3 pb-3">
-              <button className="flex items-center gap-2.5 w-full px-4 py-2.5 bg-primary-500 text-white rounded-2xl text-[15px] font-medium hover:bg-primary-600 dark:hover:bg-primary-600 active:scale-[0.97] transition-all duration-200 shadow-lg shadow-primary-500/25">
-                <Plus className="w-4 h-4 flex-shrink-0" />
-                <span>新对话</span>
-              </button>
+              <Button
+                variant="primary"
+                size="md"
+                display="full-width"
+                icon={Plus}
+                className="rounded-2xl"
+              >
+                新对话
+              </Button>
             </div>
 
             {/* 快捷操作 */}
@@ -850,9 +860,9 @@ function greet(name) {
                       className={`comet-caret absolute pointer-events-none ${
                         isTyping ? "typing" : ""
                       }`}
-                      data-direction={moveDirectionRef.current > 0 ? "1" : "-1"}
+                      data-direction={moveDirection > 0 ? "1" : "-1"}
                       style={{
-                        transform: `translate(${targetPosRef.current.x}px, ${targetPosRef.current.y}px)`,
+                        transform: `translate(${targetPos.x}px, ${targetPos.y}px)`,
                       }}
                     >
                       <div

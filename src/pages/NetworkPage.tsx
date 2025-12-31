@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { Toggle } from "../components/ui/Toggle";
+import { Button } from "../components/ui/Button";
 import { useState } from "react";
 
 // 蕾姆定义的主题色
@@ -79,22 +81,20 @@ function NetworkPage() {
         subtitle="代理和连接配置"
         actions={
           <div className="flex items-center gap-2">
-            <button
-              className="flex items-center gap-2 px-3 py-2 text-white rounded-xl text-[13px] font-medium active:scale-[0.97] transition-all duration-200 shadow-lg"
-              style={{ backgroundColor: 'var(--primary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+            <Button
+              variant="primary"
+              size="sm"
+              icon={RefreshCw}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
               全部刷新
-            </button>
+            </Button>
             <ThemeToggle />
           </div>
         }
       />
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-4 space-y-4">
+        <div className="max-w-full mx-auto p-4 space-y-4">
           {/* 网络状态概览 - 桌面应用优化 */}
           <div className="grid grid-cols-3 gap-3">
             <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
@@ -199,21 +199,11 @@ function NetworkPage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setProxyEnabled(!proxyEnabled)}
-                  className={`w-10 h-6 rounded-full relative transition-all duration-200 ${
-                    proxyEnabled ? "" : "bg-[#86868b]/30"
-                  }`}
-                  style={{
-                    backgroundColor: proxyEnabled ? 'var(--primary)' : undefined,
-                  }}
-                >
-                  <span
-                    className={`absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      proxyEnabled ? "translate-x-4" : ""
-                    }`}
-                  />
-                </button>
+                <Toggle
+                  size="sm"
+                  checked={proxyEnabled}
+                  onChange={setProxyEnabled}
+                />
               </div>
 
               {/* 服务器地址 */}

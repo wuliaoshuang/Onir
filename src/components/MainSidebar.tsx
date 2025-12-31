@@ -5,10 +5,23 @@
  */
 import { useNavigate } from '@tanstack/react-router'
 import {
-  LayoutDashboard, Zap, MessageSquare, Database,
-  User, Globe, Key, PanelLeftClose, PanelLeftOpen, X,
+  Settings as SettingsIcon, Zap, MessageSquare, Database,
+  User, Globe, Key, PanelLeftClose, PanelLeftOpen, X, Folder,
 } from 'lucide-react'
 import { useUIStore } from '../stores/uiStore'
+import { Button } from './ui/Button'
+
+// 蕾姆：声明 Electron API 类型
+declare global {
+  interface Window {
+    electronAPI?: {
+      getPlatform: () => string;
+      openSettingsWindow: () => void;
+      closeSettingsWindow: () => void;
+    };
+    __TAURI__?: any;
+  }
+}
 
 export interface NavItem {
   id: string
@@ -19,22 +32,67 @@ export interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'general', label: '概览', icon: LayoutDashboard, to: '/' },
-  { id: 'providers', label: '供应商', icon: Zap, to: '/providers' },
-  { id: 'chat', label: '聊天', icon: MessageSquare, to: '/chat' },
-  { id: 'memory', label: '内存', icon: Database, to: '/memory' },
-  { id: 'ui', label: '用户界面', icon: User, to: '/ui' },
+  { id: 'general', label: '通用设置', icon: SettingsIcon, to: '/general-settings' },
+  { id: 'workspace', label: '工作目录', icon: Folder, to: '/workspace' },
   { id: 'network', label: '网络', icon: Globe, to: '/network' },
-  { id: 'keys', label: '密钥绑定', icon: Key, to: '/keys' },
+  { id: 'ui', label: '用户界面', icon: User, to: '/ui' },
+  { id: 'memory', label: '内存', icon: Database, to: '/memory' },
+  { id: 'providers', label: '供应商', icon: Zap, to: '/providers' },
 ]
 
 interface MainSidebarProps {
   currentPath?: string
+  /**
+   * 是否在设置页面中
+   * 在设置页面中，不显示底部的"打开设置"按钮
+   */
+  inSettingsContext?: boolean
 }
 
-export default function MainSidebar({ currentPath }: MainSidebarProps) {
+export default function MainSidebar({ currentPath, inSettingsContext = false }: MainSidebarProps) {
   const navigate = useNavigate()
   const { sidebarCollapsed, setSidebarCollapsed } = useUIStore()
+
+  // 蕾姆：打开设置窗口的处理函数
+  const handleOpenSettings = () => {
+    try {
+      // 🎯 优先使用 Electron API
+      if (window.electronAPI?.openSettingsWindow) {
+        console.log('🪟 蕾姆：调用 Electron API 打开设置窗口')
+        window.electronAPI.openSettingsWindow()
+        return
+      }
+
+      // 🔍 检测是否在 Electron 环境中
+      const isElectron = window.electronAPI !== undefined
+      if (isElectron) {
+        console.error('❌ 蕾姆：在 Electron 环境中，但 electronAPI.openSettingsWindow 不存在！')
+        return
+      }
+
+      // Web 环境下的降级方案：导航到通用设置页面
+      console.log('🌐 蕾姆：Web 环境，使用路由导航到设置页面')
+      navigate({ to: '/general-settings' })
+    } catch (error) {
+      console.error('❌ 蕾姆：打开设置窗口失败:', error)
+    }
+  }
+
+  // 蕾姆：关闭设置窗口的处理函数
+  const handleCloseSettings = () => {
+    try {
+      // 🎯 优先使用 Electron API
+      if (window.electronAPI?.closeSettingsWindow) {
+        window.electronAPI.closeSettingsWindow()
+      } else {
+        // Web 环境下的降级方案：导航回首页
+        console.warn('蕾姆：当前环境不支持窗口关闭 API')
+        navigate({ to: '/' })
+      }
+    } catch (error) {
+      console.error('关闭窗口失败:', error)
+    }
+  }
 
   return (
     <aside
@@ -92,16 +150,16 @@ export default function MainSidebar({ currentPath }: MainSidebarProps) {
                 </svg>
               </div>
               <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] text-[14px] tracking-tight">
-                AI Assistant
+                Setting
               </span>
             </div>
-            <button
-              onClick={() => setSidebarCollapsed(true)}
-              className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
+            <Button
+              variant="icon"
+              size="sm"
+              icon={PanelLeftClose}
               title="收起侧边栏"
-            >
-              <PanelLeftClose className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
-            </button>
+              onClick={() => setSidebarCollapsed(true)}
+            />
           </div>
         )}
       </div>
@@ -128,12 +186,28 @@ export default function MainSidebar({ currentPath }: MainSidebarProps) {
             )
           })}
 
-          <button className="group/btn relative w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 mt-auto">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            <div className="absolute left-full ml-2 z-50 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[11px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
-              正常
-            </div>
-          </button>
+          {/* 折叠状态下的底部按钮 */}
+          {inSettingsContext ? (
+            <button
+              onClick={handleCloseSettings}
+              className="group/btn relative w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+            >
+              <X className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+              <div className="absolute left-full ml-2 z-50 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[11px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
+                关闭设置
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={handleOpenSettings}
+              className="group/btn relative w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+            >
+              <SettingsIcon className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+              <div className="absolute left-full ml-2 z-50 px-2 py-1 bg-[#1d1d1f] dark:bg-white text-white dark:text-[#1d1d1f] text-[11px] rounded-lg opacity-0 group-hover/btn:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
+                设置
+              </div>
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -174,14 +248,25 @@ export default function MainSidebar({ currentPath }: MainSidebarProps) {
             </div>
           </nav>
 
-          {/* 底部版本信息 - 桌面应用优化 */}
+          {/* 底部按钮 - 根据上下文显示不同按钮 */}
           <div className="p-2">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
-                v1.0.0
-              </span>
-            </div>
+            {inSettingsContext ? (
+              <button
+                onClick={handleCloseSettings}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+              >
+                <X className="w-4 h-4 flex-shrink-0 text-[#86868b] dark:text-[#8e8e93]" />
+                <span className="text-[13px]">关闭设置</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleOpenSettings}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
+              >
+                <SettingsIcon className="w-4 h-4 flex-shrink-0 text-[#86868b] dark:text-[#8e8e93]" />
+                <span className="text-[13px]">打开设置</span>
+              </button>
+            )}
           </div>
         </>
       )}

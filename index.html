@@ -5,6 +5,57 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>vercel-vite</title>
+
+    <!-- 🎨 蕾姆的主题初始化脚本 - 防止白屏闪烁 -->
+    <script>
+      (function() {
+        try {
+          // 从 localStorage 读取主题设置
+          const storageKey = 'onir-theme-storage'
+          const storedData = localStorage.getItem(storageKey)
+
+          let resolvedTheme = 'light' // 默认浅色
+
+          if (storedData) {
+            const parsed = JSON.parse(storedData)
+            const mode = parsed.state?.mode
+
+            if (mode) {
+              // 解析实际主题（处理 system 模式）
+              resolvedTheme = mode === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : mode
+
+              // 在 DOM 加载前立即应用主题 class
+              if (resolvedTheme === 'dark') {
+                document.documentElement.classList.add('dark')
+              }
+            }
+
+            // 同时应用其他主题设置（避免二次闪烁）
+            const accentColor = parsed.state?.accentColor
+            const fontSize = parsed.state?.fontSize
+            const animations = parsed.state?.animations
+            const highRefresh = parsed.state?.highRefresh
+
+            if (accentColor) document.documentElement.setAttribute('data-theme-color', accentColor)
+            if (fontSize) document.documentElement.setAttribute('data-font-size', fontSize.toString())
+            if (animations !== undefined) document.documentElement.setAttribute('data-animations', animations.toString())
+            if (highRefresh !== undefined) document.documentElement.setAttribute('data-high-refresh', highRefresh.toString())
+          }
+
+          // 🎯 关键：根据解析的主题，动态设置 body 的背景色
+          // 这样在 CSS 加载前就有正确的背景色了
+          const backgroundColor = resolvedTheme === 'dark' ? '#000000' : '#f5f5f7'
+          document.write('<style>body{background-color:' + backgroundColor + ';margin:0;padding:0;}</style>')
+
+        } catch (error) {
+          console.warn('蕾姆的主题初始化失败:', error)
+          // 出错时使用浅色作为后备
+          document.write('<style>body{background-color:#f5f5f7;margin:0;padding:0;}</style>')
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

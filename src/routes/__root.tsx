@@ -1,59 +1,93 @@
 /**
- * 蕾姆精心设计的根路由布局
- * 根据路由路径动态选择布局方式：
- * - Chat 相关路由：独立布局（无 MainSidebar，使用内部 Sidebar）
- * - 其他路由：标准布局（带 MainSidebar）
- * ✨ 新增路由过渡动画，提供丝滑的页面切换体验
+ * 蕾姆精心设计的根路由布局 - 支持双窗口架构
+ *
+ * 多窗口架构说明：
+ * - 主窗口：加载主应用内容
+ * - 设置窗口：独立的子窗口，显示设置页面
  */
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { ThemeProvider } from '../contexts/ThemeContext'
-import { useUIStore } from '../stores/uiStore'
-import MainSidebar from '../components/MainSidebar'
-import PageTransition from '../components/PageTransition'
-import { useLocation } from '@tanstack/react-router'
-import { useMemo, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { initCrossWindowSync } from '../stores/apiKeyStore'
+import { useThemeStore } from '../stores/themeStore'
+import { listenCrossWindowEvent, CrossWindowEventType } from '../lib/crossWindowEvents'
 
 function RootComponent() {
-  const location = useLocation()
+  const [isReady, setIsReady] = useState(false)
+  const initTheme = useThemeStore((state) => state.initTheme)
+  const reloadFromStorage = useThemeStore((state) => state.reloadFromStorage)
 
-  // 🎯 蕾姆精心设计的防闪烁逻辑
-  // 确保 themeStore 从 localStorage 恢复完成后再渲染应用
-  const [isThemeReady, setIsThemeReady] = useState(false)
-
+  // 🎯 蕾姆：初始化主题
   useEffect(() => {
-    // 短暂延迟以确保 Zustand persist 完成 hydration
-    const timer = setTimeout(() => {
-      setIsThemeReady(true)
-    }, 0)
+    initTheme()
+    setIsReady(true)
+  }, [initTheme])
 
-    return () => clearTimeout(timer)
-  }, [])
+  // 🎯 蕾姆：初始化跨窗口同步
+  useEffect(() => {
+    let unlistenApiKey: (() => Promise<void>) | null = null
+    let unlistenTheme: (() => Promise<void>) | null = null
+    let unlistenLanguage: (() => Promise<void>) | null = null
 
-  // 判断当前是否为 Chat 路由（需要独立布局，隐藏 MainSidebar）
-  const isChatRoute = useMemo(() => {
-    const path = location.pathname
-    return path.startsWith('/chat') || path.startsWith('/conversation')
-  }, [location.pathname])
+    const initSync = async () => {
+      try {
+        // API 密钥跨窗口同步
+        unlistenApiKey = await initCrossWindowSync()
+        console.log('🎯 蕾姆：API密钥跨窗口同步已启用')
 
-  // 🎯 蕾姆的防闪烁保护：主题未准备好时显示加载占位
-  if (!isThemeReady) {
-    return null // 或者显示一个加载占位符
+        // 主题跨窗口同步
+        unlistenTheme = await listenCrossWindowEvent(
+          CrossWindowEventType.THEME_UPDATED,
+          async (payload) => {
+            console.log('🎨 蕾姆：收到主题更新事件', payload)
+            // 从 localStorage 重新加载主题设置
+            reloadFromStorage()
+          }
+        )
+        console.log('🎨 蕾姆：主题跨窗口同步已启用')
+
+        // 语言跨窗口同步
+        unlistenLanguage = await listenCrossWindowEvent(
+          CrossWindowEventType.LANGUAGE_UPDATED,
+          async (payload) => {
+            console.log('🌐 蕾姆：收到语言更新事件', payload)
+            // 从 localStorage 重新加载语言设置
+            const { useLocaleStore } = await import('../stores/localeStore')
+            useLocaleStore.getState().reloadFromStorage()
+          }
+        )
+        console.log('🌐 蕾姆：语言跨窗口同步已启用')
+      } catch (error) {
+        console.error('❌ 蕾姆：跨窗口同步初始化失败', error)
+      }
+    }
+
+    initSync()
+
+    return () => {
+      if (unlistenApiKey) {
+        unlistenApiKey().then(() => console.log('🔚 蕾姆：API密钥跨窗口同步已停止'))
+      }
+      if (unlistenTheme) {
+        unlistenTheme().then(() => console.log('🔚 蕾姆：主题跨窗口同步已停止'))
+      }
+      if (unlistenLanguage) {
+        unlistenLanguage().then(() => console.log('🔚 蕾姆：语言跨窗口同步已停止'))
+      }
+    }
+  }, [reloadFromStorage])
+
+  // 等待初始化完成
+  if (!isReady) {
+    console.log('⏳ 蕾姆：等待初始化完成...')
+    return null
   }
 
   return (
     <ThemeProvider>
-      <div className="h-screen w-screen overflow-hidden bg-[#f5f5f7] dark:bg-black">
-        <div className="h-full flex">
-          {/* 主导航侧边栏 - Chat 路由下隐藏 */}
-          {!isChatRoute && (
-            <MainSidebar currentPath={location.pathname} />
-          )}
-
-          {/* ✨ 页面内容区域 - 包含过渡动画 */}
-          <PageTransition />
-        </div>
-      </div>
+      {/* 🎯 路由出口：TanStack Router 会根据当前路径自动选择正确的布局路由 */}
+      <Outlet />
 
       {/* 开发环境显示路由调试工具 */}
       {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}

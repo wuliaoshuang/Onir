@@ -1,9 +1,11 @@
 import { Moon, Sun, Monitor } from 'lucide-react'
 import { useThemeStore } from '../stores/themeStore'
+import { Button } from './ui/Button'
 
 /**
  * 主题切换按钮 - 支持浅色/深色/跟随系统三种模式
  * 蕾姆精心优化，现在使用 themeStore 进行状态管理
+ * 已迁移到统一的 Button 组件系统
  */
 export function ThemeToggle() {
   const { mode, resolvedTheme, setThemeMode } = useThemeStore()
@@ -38,16 +40,15 @@ export function ThemeToggle() {
   }
 
   return (
-    <button
-      onClick={handleToggle}
-      className="
-        p-2.5 rounded-xl transition-all duration-200
-        hover:bg-[--bg-hover] active:scale-95
-        [&_svg]:transition-all [&_svg]:duration-200
-      "
+    <Button
+      variant="ghost"
+      size="md"
+      aria-label={getTitle()}
       title={getTitle()}
+      onClick={handleToggle}
+      className="p-2.5 rounded-xl [&_svg]:transition-all [&_svg]:duration-200"
     >
       {getIcon()}
-    </button>
+    </Button>
   )
 }

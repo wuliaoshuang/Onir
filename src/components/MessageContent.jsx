@@ -49,9 +49,9 @@ export function MessageContent({ content }) {
             child => child?.type === 'element' && child?.tagName === 'code'
           )
           if (hasCodeChild) {
-            return <span className="block my-2">{children}</span>
+            return <span className="block my-2 break-words">{children}</span>
           }
-          return <p className="text-[15px] leading-[1.6] text-[#1d1d1f] dark:text-gray-200 my-2">{children}</p>;
+          return <p className="text-[15px] leading-[1.6] text-[#1d1d1f] dark:text-gray-200 my-2 break-words">{children}</p>;
         },
 
         // ========== 文字样式 ==========
@@ -83,7 +83,7 @@ export function MessageContent({ content }) {
         },
 
         // ========== 代码块（重新设计）==========
-        code({ node, inline, className, children, ...props }) {
+        code({ inline, className, children, ...props }) {
           const language = className?.replace('language-', '') || ''
           const codeContent = String(children).replace(/\n$/, '')
           const currentIndex = codeBlockIndexRef.current++
@@ -135,7 +135,7 @@ export function MessageContent({ content }) {
               {/* 代码内容区 */}
               <pre className="p-4 overflow-x-auto bg-white dark:bg-[#1c1c1e]">
                 <code
-                  className="text-[13px] font-mono leading-[1.7] text-[#1d1d1f] dark:text-[#e5e5ea] block"
+                  className="text-[13px] font-mono leading-[1.7] text-[#1d1d1f] dark:text-[#e5e5ea] block whitespace-pre"
                   {...props}
                 >
                   {children}
@@ -143,14 +143,14 @@ export function MessageContent({ content }) {
               </pre>
             </div>
           ) : (
-            <code className="px-1.5 py-0.5 rounded-md text-[13px] font-mono bg-[#f5f5f7] dark:bg-[#2c2c2e] text-primary-500 border border-[#e5e5ea] dark:border-[#3a3a3c]" {...props}>
+            <code className="px-1.5 py-0.5 rounded-md text-[13px] font-mono bg-[#f5f5f7] dark:bg-[#2c2c2e] text-primary-500 border border-[#e5e5ea] dark:border-[#3a3a3c] break-all" {...props}>
               {children}
             </code>
           );
         },
 
         // ========== 链接 ==========
-        a({ node, children, href, ...props }) {
+        a({ children, href, ...props }) {
           return (
             <a
               href={href}
@@ -185,7 +185,7 @@ export function MessageContent({ content }) {
           return <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f] dark:text-white">{children}</th>;
         },
         td({ children }) {
-          return <td className="px-4 py-2.5 text-[#1d1d1f] dark:text-gray-200">{children}</td>;
+          return <td className="px-4 py-2.5 text-[#1d1d1f] dark:text-gray-200 max-w-md break-words">{children}</td>;
         },
 
         // ========== 其他元素 ==========
