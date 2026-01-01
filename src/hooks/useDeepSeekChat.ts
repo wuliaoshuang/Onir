@@ -1,106 +1,272 @@
 /**
- * 蕾姆精心设计的 DeepSeek 聊天 Hook
- * 封装聊天逻辑，简化组件使用
+ * 蕾姆精心重构的多供应商聊天 Hook
+ * ✨ 修复严重 bug：现在根据模型名称使用正确的 API endpoint
+ *
+ * 修复内容：
+ * - 之前：总是使用 DeepSeek API，不管选择什么模型
+ * - 现在：根据模型名称查找对应供应商，使用正确的 API endpoint
  */
-
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useChatStore } from '../stores/chatStore'
 import { useApiKeyStore } from '../stores/apiKeyStore'
-import { DeepSeekClient } from '../services/deepseek'
+import { useUserSettingsStore, DEFAULT_PROMPT } from '../stores/userSettingsStore'
+import { UniversalChatClient } from '../services/chat'
+import { generateTitle } from '../services/titleGenerator'
+
+// 🎯 蕾姆：默认模型
+const DEFAULT_MODEL = 'deepseek-chat'
+
+interface UseDeepSeekChatOptions {
+  conversationId: string
+}
+
+interface UseDeepSeekChatResult {
+  sendMessage: (userMessage: string) => Promise<void>
+  abort: () => void
+  isGenerating: boolean
+  error: string | null
+}
 
 /**
  * DeepSeek 聊天 Hook
  *
+ * @param conversationId - 会话 ID，每个会话独立管理状态
  * @example
- * const { sendMessage, isGenerating } = useDeepSeekChat()
- * await sendMessage('你好，蕾姆！')
+ * const { sendMessage, abort, isGenerating } = useDeepSeekChat({ conversationId: 'conv_123' })
  */
-export function useDeepSeekChat() {
+export function useDeepSeekChat({ conversationId }: UseDeepSeekChatOptions): UseDeepSeekChatResult {
+  // 🎯 蕾姆：本地状态，只用于 UI 反馈
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // 🎯 蕾姆：Store 方法
   const {
     addMessage,
-    startStreamingMessage,
+    getConversation,
+    setStreamingState,
+    getStreamingState,
     updateStreamingContent,
-    completeStreamingMessage,
-    isGenerating,
+    abortConversationGeneration,
+    getConversationModel,  // 🎯 蕾姆：获取对话的模型
+    renameConversation,    // 🎯 蕾姆：重命名对话（用于标题生成）
+    setTitleGenerating,    // 🎯 蕾姆：设置标题生成状态
+    setTitleGenerated,     // 🎯 蕾姆：标记标题生成完成
   } = useChatStore()
 
-  const { apiKey } = useApiKeyStore()
+  const { getModelCredentials } = useApiKeyStore()
+  const { systemPrompt } = useUserSettingsStore()  // 🎯 蕾姆：获取用户自定义提示词
 
-  // 获取当前对话的消息历史
-  const messages = useChatStore((state) =>
-    state.conversations.find((c) => c.id === state.activeConversationId)?.messages || []
-  )
+  // 🎯 蕾姆：组件卸载时清理
+  useEffect(() => {
+    return () => {
+      // 如果当前会话正在生成，取消它
+      const streamingState = getStreamingState(conversationId)
+      if (streamingState?.status === 'generating') {
+        abortConversationGeneration(conversationId)
+      }
+    }
+  }, [conversationId, getStreamingState, abortConversationGeneration])
 
   /**
    * 发送消息并处理流式响应
    */
   const sendMessage = useCallback(
     async (userMessage: string) => {
-      // 检查 API Key
-      if (!apiKey) {
-        throw new Error('请先配置 API Key')
+      // 🎯 蕾姆：获取对话的模型或使用默认模型
+      const conversationModel = getConversationModel(conversationId)
+      const model = conversationModel || DEFAULT_MODEL
+
+      // 🎯 蕾姆修复：根据模型名称获取正确的 API endpoint 和 Key
+      const credentials = getModelCredentials(model)
+      if (!credentials) {
+        throw new Error(`找不到模型 "${model}" 对应的供应商配置，请检查供应商是否已配置 API Key`)
       }
 
-      // 添加用户消息
-      addMessage('user', userMessage)
+      console.log('🔍 蕾姆调试：使用模型 =', model, ', 供应商 =', credentials.providerId)
 
-      // 开始流式消息
-      const assistantMessageId = startStreamingMessage()
-      let accumulatedContent = ''
+      // 🎯 蕾姆：清理之前的请求
+      const streamingState = getStreamingState(conversationId)
+      if (streamingState?.status === 'generating' && streamingState.abortController) {
+        streamingState.abortController.abort()
+      }
+
+      // 1. 添加用户消息
+      addMessage(conversationId, 'user', userMessage)
+
+      // 🎯 蕾姆：标题生成 - 检查是否需要生成标题
+      const conversation = getConversation(conversationId)
+      const shouldGenerateTitle = conversation && !conversation.hasGeneratedTitle
+
+      if (shouldGenerateTitle && conversation) {
+        // 这是第一条用户消息，异步生成标题
+        setTitleGenerating(conversationId, true)
+
+        // 使用模型的 credentials 来生成标题
+        generateTitle(userMessage, {
+          apiKey: credentials.apiKey,
+          baseUrl: credentials.baseUrl,
+          providerId: credentials.providerId,
+          model,
+        })
+          .then((title) => {
+            if (title) {
+              renameConversation(conversationId, title)
+            }
+            setTitleGenerated(conversationId)
+          })
+          .catch((err) => {
+            console.warn('标题生成失败:', err)
+            // 失败时也标记为已生成，避免重复尝试
+            setTitleGenerated(conversationId)
+          })
+      }
+
+      // 2. 创建助手消息并获取 ID
+      const assistantMessageId = addMessage(conversationId, 'assistant', '')
+
+      // 3. 创建 AbortController
+      const abortController = new AbortController()
+
+      // 4. 设置流式状态
+      setStreamingState(conversationId, {
+        status: 'generating',
+        messageId: assistantMessageId,
+        abortController,
+        error: null,
+      })
+
+      setIsGenerating(true)
+      setError(null)
 
       try {
-        // 创建 DeepSeek 客户端
-        const client = new DeepSeekClient(apiKey)
+        // 5. 获取会话和消息历史
+        const conversation = getConversation(conversationId)
+        if (!conversation) {
+          throw new Error('会话不存在')
+        }
 
-        // 准备消息历史（排除系统消息和当前正在生成的消息）
-        const messageHistory = messages
-          .filter((m) => m.role !== 'system' && m.content)
+        // 🎯 蕾姆调试：打印完整消息列表
+        console.log('🔍 蕾姆调试：完整消息列表 =', JSON.stringify(conversation.messages.map(m => ({
+          id: m.id,
+          role: m.role,
+          content: m.content.slice(0, 50) + (m.content.length > 50 ? '...' : ''),
+          contentLength: m.content.length
+        })), null, 2))
+
+        // 🎯 蕾姆修复：正确的消息过滤逻辑
+        // - 排除 system 角色
+        // - 只包含有内容的消息（content.length > 0）
+        // - 排除当前正在生成的空消息
+        const messageHistory = conversation.messages
+          .filter((m) => {
+            const kept = m.role !== 'system' && m.content.length > 0 && m.id !== assistantMessageId
+            if (!kept && m.id !== assistantMessageId) {
+              console.log('🔍 蕾姆调试：过滤掉消息', { id: m.id, role: m.role, contentLength: m.content.length, reason: m.role === 'system' ? 'system' : m.content.length === 0 ? 'empty' : 'unknown' })
+            }
+            return kept
+          })
           .map((m) => ({ role: m.role, content: m.content }))
 
-        // 发起流式请求
+        // 🎯 蕾姆：获取对话的模型或使用默认模型
+        const conversationModel = getConversationModel(conversationId)
+        const model = conversationModel || DEFAULT_MODEL
+
+        // 🎯 蕾姆调试：打印消息历史
+        console.log('🔍 蕾姆调试：发送消息历史 =', JSON.stringify(messageHistory, null, 2))
+        console.log('🔍 蕾姆调试：系统提示词 =', systemPrompt || DEFAULT_PROMPT)
+        console.log('🔍 蕾姆调试：使用模型 =', model)
+
+        // 🎯 蕾姆修复：根据模型名称获取正确的 API endpoint 和 Key
+        const credentials = getModelCredentials(model)
+        if (!credentials) {
+          throw new Error(`找不到模型 "${model}" 对应的供应商配置，请检查供应商是否已配置 API Key`)
+        }
+
+        console.log('🔍 蕾姆调试：使用供应商 =', credentials.providerId, ', baseUrl =', credentials.baseUrl)
+
+        // 6. 创建通用聊天客户端并发起请求
+        const client = new UniversalChatClient({
+          apiKey: credentials.apiKey,
+          baseUrl: credentials.baseUrl,
+          providerId: credentials.providerId,
+        })
+        let accumulatedContent = ''
+
         await client.chat(
           messageHistory,
           {
             onChunk: (chunk) => {
-              // 累积内容并更新 UI
               accumulatedContent += chunk
-              updateStreamingContent(assistantMessageId, accumulatedContent)
+              updateStreamingContent(conversationId, assistantMessageId, accumulatedContent)
             },
             onComplete: () => {
-              // 完成流式消息
-              completeStreamingMessage(assistantMessageId)
+              setStreamingState(conversationId, {
+                status: 'completed',
+                messageId: assistantMessageId,
+                abortController: null,
+              })
+              setIsGenerating(false)
             },
-            onError: (error) => {
-              // 错误处理
-              console.error('生成失败:', error)
-              const errorMessage = accumulatedContent
-                ? `${accumulatedContent}\n\n生成失败：${error.message}`
-                : `生成失败：${error.message}`
-              updateStreamingContent(assistantMessageId, errorMessage)
-              completeStreamingMessage(assistantMessageId)
+            onError: (err) => {
+              const errorMsg = accumulatedContent
+                ? `${accumulatedContent}\n\n生成失败：${err.message}`
+                : `生成失败：${err.message}`
+              updateStreamingContent(conversationId, assistantMessageId, errorMsg)
+              setStreamingState(conversationId, {
+                status: 'error',
+                messageId: assistantMessageId,
+                abortController: null,
+                error: err.message,
+              })
+              setError(err.message)
+              setIsGenerating(false)
             },
           },
           {
-            systemPrompt: '你是蕾姆，一个友好的 AI 助手。',
+            systemPrompt: systemPrompt || DEFAULT_PROMPT,  // 🎯 蕾姆：使用用户自定义提示词
             temperature: 0.7,
+            model,  // 🎯 蕾姆：使用选中的模型
           }
         )
-      } catch (error) {
-        // 异常处理
-        console.error('发送消息失败:', error)
-        const errorMessage = accumulatedContent
-          ? `${accumulatedContent}\n\n生成失败：${(error as Error).message}`
-          : `生成失败：${(error as Error).message}`
-        updateStreamingContent(assistantMessageId, errorMessage)
-        completeStreamingMessage(assistantMessageId)
+      } catch (err) {
+        const errorObj = err as Error
+        // 忽略 AbortError（用户主动取消）
+        if (errorObj.name !== 'AbortError') {
+          const conversation = getConversation(conversationId)
+          const streamingState = getStreamingState(conversationId)
+
+          if (conversation && streamingState?.messageId) {
+            const errorMsg = `生成失败：${errorObj.message}`
+            updateStreamingContent(conversationId, streamingState.messageId, errorMsg)
+          }
+
+          setStreamingState(conversationId, {
+            status: 'error',
+            messageId: streamingState?.messageId || null,
+            abortController: null,
+            error: errorObj.message,
+          })
+          setError(errorObj.message)
+        }
+        setIsGenerating(false)
       }
     },
-    [apiKey, messages]
+    [conversationId, getModelCredentials, addMessage, getConversation, getConversationModel, setStreamingState, getStreamingState, updateStreamingContent, abortConversationGeneration, renameConversation, setTitleGenerating, setTitleGenerated, systemPrompt]
   )
+
+  /**
+   * 取消当前会话的生成
+   */
+  const abort = useCallback(() => {
+    abortConversationGeneration(conversationId)
+    setIsGenerating(false)
+    setError(null)
+  }, [conversationId, abortConversationGeneration])
 
   return {
     sendMessage,
+    abort,
     isGenerating,
-    messages,
+    error,
   }
 }

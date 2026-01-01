@@ -86,8 +86,8 @@ export function LanguageSelector() {
         className="flex items-center gap-2 px-3 py-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
         title={t('languageSelector.changeLanguage')}
       >
-        <Globe className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
-        <span className="text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7]">
+        <Globe className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
+        <span className="text-[13px] text-light-text-primary dark:text-dark-text-primary">
           {currentLang?.flag} {currentLang?.nativeName}
         </span>
       </button>
@@ -99,9 +99,9 @@ export function LanguageSelector() {
             ref={dropdownRef}
             className={`
               fixed z-[9999]
-              bg-white/95 dark:bg-[#1c1c1e]/95
+              bg-white/95 dark:bg-dark-card/95
               backdrop-blur-xl
-              border border-[#e5e5ea] dark:border-[#3a3a3c]
+              border border-light-border dark:border-dark-border
               rounded-lg shadow-2xl
               py-2
               transition-all duration-200
@@ -127,7 +127,7 @@ export function LanguageSelector() {
                     transition-all duration-150
                     ${isSelected
                       ? 'bg-primary-500/10 text-primary-500'
-                      : 'text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-black/5 dark:hover:bg-white/5'
+                      : 'text-light-text-primary dark:text-dark-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                     }
                   `}
                 >
@@ -136,7 +136,7 @@ export function LanguageSelector() {
                     <span className="text-[13px]">{info.nativeName}</span>
                   </span>
                   {isSelected && (
-                    <Check className="w-4 h-4 flex-shrink-0" />
+                    <Check className="w-4 h-4 shrink-0" />
                   )}
                 </button>
               );

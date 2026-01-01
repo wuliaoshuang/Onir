@@ -9,20 +9,36 @@ import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { ThemeProvider } from '../contexts/ThemeContext'
 import { useEffect, useState } from 'react'
-import { initCrossWindowSync } from '../stores/apiKeyStore'
+import { initCrossWindowSync, useApiKeyStore } from '../stores/apiKeyStore'
 import { useThemeStore } from '../stores/themeStore'
+import { useUserSettingsStore } from '../stores/userSettingsStore'
 import { listenCrossWindowEvent, CrossWindowEventType } from '../lib/crossWindowEvents'
 
 function RootComponent() {
   const [isReady, setIsReady] = useState(false)
   const initTheme = useThemeStore((state) => state.initTheme)
   const reloadFromStorage = useThemeStore((state) => state.reloadFromStorage)
+  const initialize = useApiKeyStore((state) => state.initialize)
+  const initializeUserSettings = useUserSettingsStore((state) => state.initialize)
 
-  // 🎯 蕾姆：初始化主题
+  // 🎯 蕾姆：初始化主题、API Keys 和用户设置
   useEffect(() => {
-    initTheme()
-    setIsReady(true)
-  }, [initTheme])
+    const initAll = async () => {
+      // 1. 初始化 API Keys（必须先初始化，否则聊天功能无法使用）
+      await initialize()
+      console.log('🔑 蕾姆：API Keys 已初始化')
+
+      // 2. 初始化用户设置
+      await initializeUserSettings()
+      console.log('⚙️ 蕾姆：用户设置已初始化')
+
+      // 3. 初始化主题
+      initTheme()
+
+      setIsReady(true)
+    }
+    initAll()
+  }, [initTheme, initialize, initializeUserSettings])
 
   // 🎯 蕾姆：初始化跨窗口同步
   useEffect(() => {
@@ -66,15 +82,9 @@ function RootComponent() {
     initSync()
 
     return () => {
-      if (unlistenApiKey) {
-        unlistenApiKey().then(() => console.log('🔚 蕾姆：API密钥跨窗口同步已停止'))
-      }
-      if (unlistenTheme) {
-        unlistenTheme().then(() => console.log('🔚 蕾姆：主题跨窗口同步已停止'))
-      }
-      if (unlistenLanguage) {
-        unlistenLanguage().then(() => console.log('🔚 蕾姆：语言跨窗口同步已停止'))
-      }
+      unlistenApiKey?.()?.then(() => console.log('🔚 蕾姆：API密钥跨窗口同步已停止'))
+      unlistenTheme?.()?.then(() => console.log('🔚 蕾姆：主题跨窗口同步已停止'))
+      unlistenLanguage?.()?.then(() => console.log('🔚 蕾姆：语言跨窗口同步已停止'))
     }
   }, [reloadFromStorage])
 
@@ -98,10 +108,10 @@ function RootComponent() {
 // 404 未找到页面组件
 function NotFound() {
   return (
-    <div className="flex-1 flex items-center justify-center bg-[#f5f5f7] dark:bg-black">
+    <div className="flex-1 flex items-center justify-center bg-light-page dark:bg-dark-page">
       <div className="text-center">
         <h1 className="text-[64px] font-bold text-primary-500 mb-4">404</h1>
-        <p className="text-[16px] text-[#86868b] dark:text-[#8e8e93]">
+        <p className="text-[16px] text-light-text-secondary dark:text-dark-text-secondary">
           页面未找到
         </p>
       </div>

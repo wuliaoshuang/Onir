@@ -83,7 +83,7 @@ function MemoryPage() {
   ];
 
   return (
-    <div className="flex-1 h-svh flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black overflow-hidden">
+    <div className="flex-1 h-svh flex flex-col min-w-0 bg-light-page dark:bg-dark-page overflow-hidden">
       <PageHeader
         title="内存"
         subtitle="管理向量数据库"
@@ -106,7 +106,7 @@ function MemoryPage() {
         <div className="max-w-full mx-auto p-4 space-y-4">
           {/* 存储概览 - 桌面应用优化 */}
           <div className="grid grid-cols-4 gap-3">
-            <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center gap-2">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110"
@@ -115,12 +115,12 @@ function MemoryPage() {
                   <HardDrive className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                  <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                     总存储
                   </p>
-                  <p className="text-[16px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <p className="text-[16px] font-bold text-light-text-primary dark:text-dark-text-primary">
                     420.6
-                    <span className="text-[11px] font-medium text-[#86868b] dark:text-[#8e8e93]">
+                    <span className="text-[11px] font-medium text-light-text-secondary dark:text-dark-text-secondary">
                       {" "}
                       MB
                     </span>
@@ -128,7 +128,7 @@ function MemoryPage() {
                 </div>
               </div>
             </div>
-            <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center gap-2">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110"
@@ -137,16 +137,16 @@ function MemoryPage() {
                   <Database className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                  <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                     总条目
                   </p>
-                  <p className="text-[16px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <p className="text-[16px] font-bold text-light-text-primary dark:text-dark-text-primary">
                     2,379
                   </p>
                 </div>
               </div>
             </div>
-            <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center gap-2">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110"
@@ -155,14 +155,14 @@ function MemoryPage() {
                   <TrendingUp className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                  <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                     增长率
                   </p>
                   <p className="text-[16px] font-bold text-emerald-500">+18%</p>
                 </div>
               </div>
             </div>
-            <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center gap-2">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110"
@@ -171,10 +171,10 @@ function MemoryPage() {
                   <Search className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                  <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                     搜索次数
                   </p>
-                  <p className="text-[16px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <p className="text-[16px] font-bold text-light-text-primary dark:text-dark-text-primary">
                     8.5K
                   </p>
                 </div>
@@ -183,22 +183,22 @@ function MemoryPage() {
           </div>
 
           {/* 搜索框 - 桌面应用优化 */}
-          <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3">
+          <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3">
             <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
+              <Search className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
               <input
                 type="text"
                 placeholder="搜索内存集合、向量、文档..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] dark:placeholder-[#8e8e93]"
+                className="flex-1 bg-transparent outline-none text-[13px] text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary"
               />
               {searchQuery && (
                 <Button
                   variant="secondary"
                   size="xs"
                   onClick={() => setSearchQuery("")}
-                  className="bg-[#86868b]/10 text-[#86868b] dark:text-[#8e8e93] hover:bg-[#86868b]/20"
+                  className="bg-[#86868b]/10 text-light-text-secondary dark:text-dark-text-secondary hover:bg-[#86868b]/20"
                 >
                   清除
                 </Button>
@@ -209,7 +209,7 @@ function MemoryPage() {
           {/* 内存集合列表 - 桌面应用优化 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+              <h2 className="text-[13px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                 内存集合
               </h2>
               <div className="flex items-center gap-2">
@@ -227,7 +227,7 @@ function MemoryPage() {
                 return (
                   <div
                     key={item.id}
-                    className="group relative bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
+                    className="group relative bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
                     onMouseEnter={() => setHoveredCard(item.id)}
                     onMouseLeave={() => setHoveredCard(null)}
                     style={{
@@ -250,10 +250,10 @@ function MemoryPage() {
                           <Icon className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-[14px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-0.5">
+                          <h3 className="text-[14px] font-semibold text-light-text-primary dark:text-dark-text-primary mb-0.5">
                             {item.name}
                           </h3>
-                          <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                          <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                             {item.description}
                           </p>
                         </div>
@@ -261,24 +261,24 @@ function MemoryPage() {
 
                       {/* 统计数据 */}
                       <div className="grid grid-cols-3 gap-2 mb-3">
-                        <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                          <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                        <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                          <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                             条目
                           </p>
-                          <p className="text-[13px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                          <p className="text-[13px] font-bold text-light-text-primary dark:text-dark-text-primary">
                             {item.count}
                           </p>
                         </div>
-                        <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                          <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                        <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                          <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                             大小
                           </p>
-                          <p className="text-[13px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                          <p className="text-[13px] font-bold text-light-text-primary dark:text-dark-text-primary">
                             {item.size}
                           </p>
                         </div>
-                        <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                          <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                        <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                          <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                             增长
                           </p>
                           <div className="flex items-center gap-0.5">
@@ -291,8 +291,8 @@ function MemoryPage() {
                       </div>
 
                       {/* 底部操作 */}
-                      <div className="flex items-center justify-between pt-3 border-t border-[#e5e5ea] dark:border-[#3a3a3c]">
-                        <div className="flex items-center gap-1.5 text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                      <div className="flex items-center justify-between pt-3 border-t border-light-border dark:border-dark-border">
+                        <div className="flex items-center gap-1.5 text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                           <RefreshCw className="w-3.5 h-3.5" />
                           上次：{item.lastSync}
                         </div>
@@ -321,14 +321,14 @@ function MemoryPage() {
           </div>
 
           {/* 上传新数据卡片 - 桌面应用优化 */}
-          <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-6 text-center border-2 border-dashed border-[#e5e5ea] dark:border-[#3a3a3c] hover:border-primary-500/50 dark:hover:border-primary-500/30 transition-all duration-200 cursor-pointer hover:-translate-y-0.5">
-            <div className="w-12 h-12 rounded-xl bg-[#f5f5f7] dark:bg-black flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform duration-300">
+          <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-6 text-center border-2 border-dashed border-light-border dark:border-dark-border hover:border-primary-500/50 dark:hover:border-primary-500/30 transition-all duration-200 cursor-pointer hover:-translate-y-0.5">
+            <div className="w-12 h-12 rounded-xl bg-light-page dark:bg-dark-page flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform duration-300">
               <Upload className="w-6 h-6 text-primary-500" />
             </div>
-            <h3 className="text-[14px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+            <h3 className="text-[14px] font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
               上传新数据
             </h3>
-            <p className="text-[12px] text-[#86868b] dark:text-[#8e8e93]">
+            <p className="text-[12px] text-light-text-secondary dark:text-dark-text-secondary">
               支持的格式：TXT、MD、PDF、JSON、CSV
             </p>
           </div>

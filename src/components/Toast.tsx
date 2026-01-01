@@ -119,7 +119,7 @@ export default function Toast({ toast, onClose, onPause, onResume }: ToastCompon
     <div
       className={`
         relative flex items-start gap-3 px-4 py-3
-        bg-white/80 dark:bg-[#1c1c1e]/80
+        bg-white/80 dark:bg-dark-card/80
         backdrop-blur-xl rounded-xl shadow-lg shadow-black/5
         overflow-hidden
         border ${styles.borderColor}
@@ -135,7 +135,7 @@ export default function Toast({ toast, onClose, onPause, onResume }: ToastCompon
           图标
       ======================================== */}
       <div className={`
-        flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+        shrink-0 w-5 h-5 rounded-full flex items-center justify-center
         ${styles.bgColor}
       `}>
         <Icon className={`w-3.5 h-3.5 ${styles.iconColor}`} />
@@ -145,7 +145,7 @@ export default function Toast({ toast, onClose, onPause, onResume }: ToastCompon
           消息内容
       ======================================== */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] break-words">
+        <p className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary warp-break-words">
           {toast.message}
         </p>
       </div>
@@ -156,10 +156,10 @@ export default function Toast({ toast, onClose, onPause, onResume }: ToastCompon
       <button
         onClick={handleClose}
         className="
-          flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center
-          text-[#86868b] dark:text-[#8e8e93]
+          shrink-0 w-5 h-5 rounded-md flex items-center justify-center
+          text-light-text-secondary dark:text-dark-text-secondary
           hover:bg-[#f5f5f7] dark:hover:bg-black
-          hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]
+          hover:text-light-text-primary dark:hover:text-dark-text-primary
           transition-all duration-200
           opacity-0 group-hover:opacity-100
         "
@@ -171,9 +171,9 @@ export default function Toast({ toast, onClose, onPause, onResume }: ToastCompon
           进度条（底部）
       ======================================== */}
       {toast.showProgress && duration > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#e5e5ea] dark:bg-[#3a3a3c] rounded-b-xl overflow-hidden">
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-light-border dark:bg-dark-border rounded-b-xl overflow-hidden">
           <div
-            className={`h-full ${styles.progressColor} transition-all duration-[50ms] ease-linear`}
+            className={`h-full ${styles.progressColor} transition-all duration-50 ease-linear`}
             style={{ width: `${progress}%` }}
           />
         </div>

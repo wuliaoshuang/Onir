@@ -76,6 +76,20 @@ interface ApiKeyState {
   getActiveKey: (providerId: ProviderType) => ApiKey | undefined
   getCurrentApiKey: () => string | null
 
+  // 🎯 蕾姆新增：获取可用模型列表
+  getAvailableModels: () => string[]
+  getDefaultModel: () => string | undefined
+
+  // 🎯 蕾姆新增：根据模型名称查找供应商（修复多供应商 API 调用 bug）
+  getProviderByModel: (model: string) => Provider | undefined
+
+  // 🎯 蕾姆新增：获取模型对应的 API Key 和 endpoint（修复多供应商 API 调用 bug）
+  getModelCredentials: (model: string) => { apiKey: string; baseUrl: string; providerId: string } | null
+
+  // 🎯 蕾姆新增：配置检查方法
+  isConfigured: () => boolean
+  isProviderConfigured: (providerId: ProviderType) => boolean
+
   // 清空数据
   clearAll: () => Promise<void>
 }
@@ -254,7 +268,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
         providerId,
         name: name || `${providerId} 密钥`,
         keyValue,
-        status: 'inactive',
+        status: 'active', // 🎯 蕾姆：添加后默认为 active，有问题再标记为 error
         isDefault: keys.filter(k => k.providerId === providerId).length === 0,
         createdAt: Date.now(),
         metadata,
@@ -454,7 +468,96 @@ export const useApiKeyStore = create<ApiKeyState>()(
     getCurrentApiKey: () => {
       const { defaultProvider } = get()
       const activeKey = get().getActiveKey(defaultProvider)
+      console.log('🔍 蕾姆调试：getCurrentApiKey - defaultProvider =', defaultProvider, ', activeKey =', activeKey?.name || 'none')
       return activeKey?.keyValue || null
+    },
+
+    /**
+     * 🎯 蕾姆新增：检查当前默认供应商是否已配置
+     * @returns {boolean} 是否已配置 API Key（有密钥且状态不是 error）
+     */
+    isConfigured: () => {
+      const state = get()
+      const { defaultProvider, keys } = state
+      console.log('🔍 蕾姆调试：isConfigured - defaultProvider =', defaultProvider, ', keys =', keys.map(k => ({ id: k.id, providerId: k.providerId, status: k.status })))
+      return keys.some(k => k.providerId === defaultProvider && k.status !== 'error')
+    },
+
+    /**
+     * 🎯 蕾姆新增：检查指定供应商是否已配置
+     * @param {ProviderType} providerId - 供应商 ID
+     * @returns {boolean} 是否已配置且有活跃的 API Key
+     */
+    isProviderConfigured: (providerId) => {
+      const { keys } = get()
+      return keys.some(k => k.providerId === providerId && k.status === 'active')
+    },
+
+    /**
+     * 🎯 蕾姆新增：获取当前默认供应商的可用模型列表
+     * @returns {string[]} 模型名称数组
+     */
+    getAvailableModels: () => {
+      const { defaultProvider, providers } = get()
+      const provider = providers.find(p => p.id === defaultProvider)
+      return provider?.models || []
+    },
+
+    /**
+     * 🎯 蕾姆新增：获取默认模型（第一个可用模型）
+     * @returns {string | undefined} 默认模型名称
+     */
+    getDefaultModel: () => {
+      const models = get().getAvailableModels()
+      return models.length > 0 ? models[0] : undefined
+    },
+
+    /**
+     * 🎯 蕾姆新增：根据模型名称查找供应商（修复多供应商 API 调用 bug）
+     * @param model 模型名称
+     * @returns 对应的供应商，如果找不到则返回 undefined
+     */
+    getProviderByModel: (model: string) => {
+      const { providers } = get()
+      // 在所有供应商中查找包含该模型的供应商
+      return providers.find(p => p.models.includes(model))
+    },
+
+    /**
+     * 🎯 蕾姆新增：获取模型对应的 API Key 和 endpoint（修复多供应商 API 调用 bug）
+     * @param model 模型名称
+     * @returns { apiKey, baseUrl, providerId } 或 null
+     */
+    getModelCredentials: (model: string) => {
+      const { providers, keys } = get()
+      // 1. 找到包含该模型的供应商
+      const provider = providers.find(p => p.models.includes(model))
+      if (!provider) {
+        console.warn(`蕾姆：找不到模型 ${model} 对应的供应商`)
+        return null
+      }
+      if (!provider.baseUrl) {
+        console.warn(`蕾姆：供应商 ${provider.id} 没有配置 baseUrl`)
+        return null
+      }
+
+      // 2. 获取该供应商的 API Key
+      const apiKeyRecord = keys.find(k => k.providerId === provider.id && k.status === 'active')
+        || keys.find(k => k.providerId === provider.id && k.isDefault)
+        || keys.find(k => k.providerId === provider.id)
+
+      if (!apiKeyRecord) {
+        console.warn(`蕾姆：供应商 ${provider.id} 没有配置 API Key`)
+        return null
+      }
+
+      console.log(`蕾姆：模型 ${model} -> 供应商 ${provider.id} (${provider.baseUrl})`)
+
+      return {
+        apiKey: apiKeyRecord.keyValue,
+        baseUrl: provider.baseUrl,
+        providerId: provider.id,
+      }
     },
 
     /**

@@ -11,6 +11,7 @@ import {
 import { MessageContent } from '../components/MessageContent'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { Button } from '../components/ui/Button'
+import { EmptyState } from '../components/EmptyState'
 import { useChatStore, selectActiveMessages } from '../stores/chatStore'
 import { useUIStore } from '../stores/uiStore'
 
@@ -208,11 +209,13 @@ function ChatListPage() {
 
   const handleSend = () => {
     if (!input.trim()) return
-    useChatStore.getState().addMessage('user', input)
+    // 🎯 蕾姆修复：使用正确的会话 ID 添加消息
+    const conversationId = activeConversationId || 'default'
+    useChatStore.getState().addMessage(conversationId, 'user', input)
     const userInput = input
     setInput('')
     setTimeout(() => {
-      useChatStore.getState().addMessage('assistant', `我收到了你的消息："${userInput}"\n\n这是一个演示界面。`)
+      useChatStore.getState().addMessage(conversationId, 'assistant', `我收到了你的消息："${userInput}"\n\n这是一个演示界面。`)
     }, 500)
   }
 
@@ -239,10 +242,34 @@ function ChatListPage() {
 
   const activeConv = conversations.find(c => c.id === activeConversationId)
 
+  // 🎯 蕾姆：当没有任何会话时，显示引导组件
+  if (conversations.length === 0) {
+    return (
+      <div className="h-screen w-screen flex flex-col bg-light-page dark:bg-dark-page">
+        {/* 顶部栏 */}
+        <header className="h-14 bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl flex items-center justify-between px-4 border-b border-light-border dark:border-dark-border">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[16px] font-semibold text-light-text-primary dark:text-dark-text-primary">
+              Onir
+            </h1>
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+          </div>
+        </header>
+
+        {/* 空状态引导 */}
+        <EmptyState
+          onNewChat={handleNewChat}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 bg-light-page dark:bg-dark-page overflow-hidden">
       {/* 顶部栏 */}
-      <header className="h-14 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex items-center justify-between px-4 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+      <header className="h-14 bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl flex items-center justify-between px-4 border-b border-light-border dark:border-dark-border">
         <div className="flex items-center gap-3">
           <Button
             variant="icon"
@@ -250,8 +277,19 @@ function ChatListPage() {
             className="md:hidden"
             onClick={() => setMobileChatSidebarOpen(true)}
           />
-          <h1 className="text-[16px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
-            {activeConv?.title || '新对话'}
+          <h1 className="text-[16px] font-semibold text-light-text-primary dark:text-dark-text-primary flex items-center gap-2">
+            {activeConv?.isGeneratingTitle ? (
+              <>
+                <span className="inline-flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </span>
+                <span className="text-light-text-secondary dark:text-dark-text-secondary">生成中...</span>
+              </>
+            ) : (
+              activeConv?.title || '新对话'
+            )}
           </h1>
         </div>
         <div className="flex items-center gap-1">
@@ -267,8 +305,8 @@ function ChatListPage() {
           className={`
             ${mobileChatSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             fixed md:relative h-full z-40 md:z-0
-            w-72 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl
-            border-r border-[#e5e5ea] dark:border-[#3a3a3c]
+            w-72 bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl
+            border-r border-light-border dark:border-dark-border
             flex flex-col transition-transform duration-300
           `}
         >
@@ -281,15 +319,15 @@ function ChatListPage() {
           )}
 
           {/* 搜索框 */}
-          <div className="p-4 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+          <div className="p-4 border-b border-light-border dark:border-dark-border">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868b] dark:text-[#636366]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-light-text-secondary dark:text-[#636366]" />
               <input
                 type="text"
                 placeholder="搜索对话..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] dark:placeholder-[#636366] outline-none focus:ring-2 focus:ring-primary-500/20"
+                className="w-full pl-10 pr-4 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl text-[14px] text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary outline-none focus:ring-2 focus:ring-primary-500/20"
               />
             </div>
           </div>
@@ -320,16 +358,27 @@ function ChatListPage() {
                       : 'hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
-                  <MessageSquare className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                    activeConversationId === conv.id ? 'text-primary-500' : 'text-[#86868b] dark:text-[#636366]'
+                  <MessageSquare className={`w-4 h-4 mt-0.5 shrink-0 ${
+                    activeConversationId === conv.id ? 'text-primary-500' : 'text-light-text-secondary dark:text-[#636366]'
                   }`} />
                   <div className="flex-1 min-w-0 text-left">
-                    <p className={`text-[14px] font-medium truncate ${
-                      activeConversationId === conv.id ? 'text-primary-500' : 'text-[#1d1d1f] dark:text-[#f5f5f7]'
+                    <p className={`text-[14px] font-medium truncate flex items-center gap-2 ${
+                      activeConversationId === conv.id ? 'text-primary-500' : 'text-light-text-primary dark:text-dark-text-primary'
                     }`}>
-                      {conv.title}
+                      {conv.isGeneratingTitle ? (
+                        <>
+                          <span className="inline-flex gap-0.5">
+                            <span className="w-1 h-1 bg-primary-500 rounded-full animate-pulse" />
+                            <span className="w-1 h-1 bg-primary-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                            <span className="w-1 h-1 bg-primary-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+                          </span>
+                          <span className="text-light-text-secondary dark:text-dark-text-secondary">生成中</span>
+                        </>
+                      ) : (
+                        conv.title
+                      )}
                     </p>
-                    <p className="text-[12px] text-[#86868b] dark:text-[#636366] truncate">
+                    <p className="text-[12px] text-light-text-secondary dark:text-[#636366] truncate">
                       {conv.messages[conv.messages.length - 1]?.content.slice(0, 30) || '暂无消息'}
                     </p>
                   </div>
@@ -377,7 +426,7 @@ function ChatListPage() {
                           <Button
                             variant="icon"
                             icon={copiedMessageId === message.id ? Check : Copy}
-                            className="bg-white dark:bg-[#1c1c1e] shadow-sm"
+                            className="bg-white dark:bg-dark-card shadow-sm"
                             onClick={() => copyToClipboard(message.content, message.id)}
                           />
                         </div>
@@ -392,7 +441,7 @@ function ChatListPage() {
           {/* 输入区域 */}
           <div className="bg-gradient-to-t from-[#f5f5f7] dark:from-black via-[#f5f5f7] dark:via-black to-transparent p-4 pb-6">
             <div className="max-w-3xl mx-auto">
-              <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl shadow-2xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
+              <div className="bg-white dark:bg-dark-card rounded-3xl shadow-2xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
                 <div className="relative flex items-start gap-3 px-4 py-4">
                   <div className="flex-1 relative">
                     <div
@@ -428,7 +477,7 @@ function ChatListPage() {
                         }
                       }}
                       placeholder="输入消息..."
-                      className="custom-caret-textarea w-full bg-transparent resize-none outline-none text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] dark:placeholder-[#636366] min-h-[24px] max-h-60 leading-relaxed py-2 overflow-y-auto block"
+                      className="custom-caret-textarea w-full bg-transparent resize-none outline-none text-[15px] text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary min-h-[24px] max-h-60 leading-relaxed py-2 overflow-y-auto block"
                       style={{ height: 'auto' }}
                     />
 
@@ -469,7 +518,7 @@ function ChatListPage() {
                     className={
                       input.trim()
                         ? ''
-                        : 'bg-[#e5e5ea] dark:bg-[#3a3a3c] text-[#86868b] dark:text-[#636366] cursor-not-allowed hover:bg-[#e5e5ea] dark:hover:bg-[#3a3a3c]'
+                        : 'bg-light-border dark:bg-dark-border text-light-text-secondary dark:text-[#636366] cursor-not-allowed hover:bg-light-border dark:hover:bg-[#3a3a3c]'
                     }
                     onClick={handleSend}
                   />
@@ -477,7 +526,7 @@ function ChatListPage() {
               </div>
 
               <div className="flex items-center justify-center gap-3 mt-3">
-                <p className="text-[12px] text-[#86868b] dark:text-[#636366]">
+                <p className="text-[12px] text-light-text-secondary dark:text-[#636366]">
                   AI 可能产生错误，请核实重要信息
                 </p>
               </div>

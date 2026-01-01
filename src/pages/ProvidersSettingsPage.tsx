@@ -445,7 +445,7 @@ export default function ProvidersSettingsPage() {
   // 渲染
   // ========================================
   return (
-    <div className="flex-1 h-svh flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black overflow-hidden">
+    <div className="flex-1 h-svh flex flex-col min-w-0 bg-light-page dark:bg-dark-page overflow-hidden">
       {/* 页面头部 */}
       <PageHeader
         title="供应商配置"
@@ -464,12 +464,12 @@ export default function ProvidersSettingsPage() {
             {/* ========================================
                 左侧：供应商列表（卡片容器）
             ======================================== */}
-            <div className="w-56 flex-shrink-0">
-              <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 h-full flex flex-col">
+            <div className="w-56 shrink-0">
+              <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 h-full flex flex-col">
                 {/* 供应商列表标题 */}
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-light-border dark:border-dark-border">
                   <Zap className={`w-4 h-4 ${colorClass.text}`} />
-                  <p className="text-xs text-[#86868b] dark:text-[#8e8e93] font-medium tracking-wide uppercase">
+                  <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary font-medium tracking-wide uppercase">
                     供应商
                   </p>
                 </div>
@@ -486,7 +486,7 @@ export default function ProvidersSettingsPage() {
                         key={provider.id}
                         onClick={() => setSelectedProvider(provider.id)}
                         className={`
-                          w-full group relative bg-[#f5f5f7] dark:bg-black rounded-lg p-3
+                          w-full group relative bg-light-page dark:bg-dark-page rounded-lg p-3
                           transition-all duration-200 hover:shadow-lg
                           ${isSelected ? `${colorClass.bgLight} ${colorClass.ring} ring-1` : ''}
                         `}
@@ -507,7 +507,7 @@ export default function ProvidersSettingsPage() {
                           </div>
                           <div className="flex-1 text-left min-w-0">
                             <h3 className={`text-sm font-semibold truncate ${
-                              isSelected ? `${colorClass.text}` : 'text-[#1d1d1f] dark:text-[#f5f5f7]'
+                              isSelected ? `${colorClass.text}` : 'text-light-text-primary dark:text-dark-text-primary'
                             }`}>
                               {provider.name}
                             </h3>
@@ -519,13 +519,13 @@ export default function ProvidersSettingsPage() {
                               }`}>
                                 {isProviderConfigured ? '已配置' : '未配置'}
                               </span>
-                              <span className="text-[10px] text-[#86868b] dark:text-[#8e8e93]">
+                              <span className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary">
                                 {providerKeys.length}
                               </span>
                             </div>
                           </div>
                           {isSelected && (
-                            <div className={`w-4 h-4 rounded-full ${colorClass.bg} flex items-center justify-center flex-shrink-0`}>
+                            <div className={`w-4 h-4 rounded-full ${colorClass.bg} flex items-center justify-center shrink-0`}>
                               <Check className="w-2.5 h-2.5 text-white" />
                             </div>
                           )}
@@ -542,14 +542,14 @@ export default function ProvidersSettingsPage() {
             ======================================== */}
             <div className="flex-1 min-w-0">
               {currentProvider && (
-                <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 h-full flex flex-col">
+                <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 h-full flex flex-col">
                   {/* 可滚动内容区 */}
                   <div className="flex-1 overflow-y-auto p-5 space-y-6">
                     {/* 1. 供应商信息头部 */}
-                    <div className="flex items-start gap-4 pb-5 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+                    <div className="flex items-start gap-4 pb-5 border-b border-light-border dark:border-dark-border">
                       {/* 供应商图标 */}
                       <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                        className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
                         style={{ backgroundColor: `${currentProvider.color}` }}
                       >
                         {getProviderIconComponent(currentProvider.id, 28)}
@@ -557,10 +557,10 @@ export default function ProvidersSettingsPage() {
 
                       {/* 供应商信息 */}
                       <div className="flex-1">
-                        <h2 className="text-[20px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+                        <h2 className="text-[20px] font-bold text-light-text-primary dark:text-dark-text-primary mb-1">
                           {currentProvider.name}
                         </h2>
-                        <p className="text-[13px] text-[#86868b] dark:text-[#8e8e93] mb-2">
+                        <p className="text-[13px] text-light-text-secondary dark:text-dark-text-secondary mb-2">
                           高性能 AI 语言模型服务提供商
                         </p>
                         {currentProvider.baseUrl && (
@@ -586,7 +586,7 @@ export default function ProvidersSettingsPage() {
                     {/* 2. API 密钥配置区 */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        <h3 className="text-[15px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                           API 密钥
                         </h3>
                         <Button
@@ -606,7 +606,7 @@ export default function ProvidersSettingsPage() {
                           {currentKeys.map((keyItem, index) => (
                             <div
                               key={keyItem.id}
-                              className="group relative bg-[#f5f5f7] dark:bg-black rounded-xl p-4 overflow-hidden transition-all duration-300 hover:shadow-lg"
+                              className="group relative bg-light-page dark:bg-dark-page rounded-xl p-4 overflow-hidden transition-all duration-300 hover:shadow-lg"
                               onMouseEnter={() => setHoveredKey(keyItem.id)}
                               onMouseLeave={() => setHoveredKey(null)}
                               style={{
@@ -631,7 +631,7 @@ export default function ProvidersSettingsPage() {
                                     </div>
                                     <div>
                                       <div className="flex items-center gap-1.5 mb-0.5">
-                                        <h4 className="text-[14px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                                        <h4 className="text-[14px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                                           {keyItem.name}
                                         </h4>
                                         {keyItem.isDefault && (
@@ -667,7 +667,7 @@ export default function ProvidersSettingsPage() {
                                           )}
                                         </span>
                                       </div>
-                                      <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                                      <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                                         {currentProvider.name} API Key
                                       </p>
                                     </div>
@@ -697,9 +697,9 @@ export default function ProvidersSettingsPage() {
                                 </div>
 
                                 {/* 密钥显示区域 */}
-                                <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#1c1c1e] rounded-lg mb-3">
-                                  <Key className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93] shrink-0" />
-                                  <span className="flex-1 font-mono text-[12px] text-[#86868b] dark:text-[#8e8e93] truncate">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-dark-card rounded-lg mb-3">
+                                  <Key className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary shrink-0" />
+                                  <span className="flex-1 font-mono text-[12px] text-light-text-secondary dark:text-dark-text-secondary truncate">
                                     {showKeys[keyItem.id]
                                       ? keyItem.keyValue
                                       : keyItem.keyValue.slice(0, 12) + '...' + keyItem.keyValue.slice(-4)}
@@ -729,7 +729,7 @@ export default function ProvidersSettingsPage() {
                                       <Button
                                         variant="ghost"
                                         size="xs"
-                                        className={`text-[#86868b] dark:text-[#8e8e93] hover:${colorClass.text}`}
+                                        className={`text-light-text-secondary dark:text-dark-text-secondary hover:${colorClass.text}`}
                                         onClick={() => handleSetDefault(keyItem.id)}
                                       >
                                         设为默认
@@ -760,12 +760,12 @@ export default function ProvidersSettingsPage() {
                         </div>
                       ) : (
                         /* 空状态 */
-                        <div className="text-center py-12 border-2 border-dashed border-[#e5e5ea] dark:border-[#3a3a3c] rounded-xl">
-                          <Shield className="w-12 h-12 text-[#86868b] dark:text-[#8e8e93] mx-auto mb-3" />
-                          <p className="text-[14px] text-[#86868b] dark:text-[#8e8e93] mb-1">
+                        <div className="text-center py-12 border-2 border-dashed border-light-border dark:border-dark-border rounded-xl">
+                          <Shield className="w-12 h-12 text-light-text-secondary dark:text-dark-text-secondary mx-auto mb-3" />
+                          <p className="text-[14px] text-light-text-secondary dark:text-dark-text-secondary mb-1">
                             还没有配置 API 密钥
                           </p>
-                          <p className="text-[12px] text-[#86868b] dark:text-[#8e8e93]">
+                          <p className="text-[12px] text-light-text-secondary dark:text-dark-text-secondary">
                             点击上方"添加密钥"按钮开始配置
                           </p>
                         </div>
@@ -775,7 +775,7 @@ export default function ProvidersSettingsPage() {
                     {/* 3. 模型列表区 */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        <h3 className="text-[15px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                           可用模型
                         </h3>
                         <Button
@@ -792,18 +792,18 @@ export default function ProvidersSettingsPage() {
 
                       {/* 模型列表 */}
                       {currentModels.length > 0 ? (
-                        <div className="bg-[#f5f5f7] dark:bg-black rounded-xl p-2 space-y-1">
+                        <div className="bg-light-page dark:bg-dark-page rounded-xl p-2 space-y-1">
                           {currentModels.map((model) => {
                             const isEnabled = (enabledModels[selectedProvider] || []).includes(model);
                             return (
                               <div
                                 key={model}
-                                className="group flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-[#1c1c1e] rounded-lg hover:bg-white/80 dark:hover:bg-[#1c1c1e]/80 transition-all duration-200"
+                                className="group flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-dark-card rounded-lg hover:bg-white/80 dark:hover:bg-[#1c1c1e]/80 transition-all duration-200"
                               >
                                 {/* 模型名称 */}
                                 <div className="flex-1 min-w-0">
                                   <p className={`text-[13px] font-medium truncate ${
-                                    isEnabled ? 'text-[#1d1d1f] dark:text-[#f5f5f7]' : 'text-[#86868b] dark:text-[#8e8e93]'
+                                    isEnabled ? 'text-light-text-primary dark:text-dark-text-primary' : 'text-light-text-secondary dark:text-dark-text-secondary'
                                   }`}>
                                     {model}
                                   </p>
@@ -823,12 +823,12 @@ export default function ProvidersSettingsPage() {
                           })}
                         </div>
                       ) : (
-                        <div className="text-center py-8 border-2 border-dashed border-[#e5e5ea] dark:border-[#3a3a3c] rounded-xl">
-                          <List className="w-12 h-12 text-[#86868b] dark:text-[#8e8e93] mx-auto mb-3" />
-                          <p className="text-[14px] text-[#86868b] dark:text-[#8e8e93] mb-1">
+                        <div className="text-center py-8 border-2 border-dashed border-light-border dark:border-dark-border rounded-xl">
+                          <List className="w-12 h-12 text-light-text-secondary dark:text-dark-text-secondary mx-auto mb-3" />
+                          <p className="text-[14px] text-light-text-secondary dark:text-dark-text-secondary mb-1">
                             还没有获取模型列表
                           </p>
-                          <p className="text-[12px] text-[#86868b] dark:text-[#8e8e93]">
+                          <p className="text-[12px] text-light-text-secondary dark:text-dark-text-secondary">
                             点击"刷新模型"按钮获取可用模型列表
                           </p>
                         </div>
@@ -849,12 +849,12 @@ export default function ProvidersSettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-[330px]">
             {/* 弹窗头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+            <div className="flex items-center justify-between p-6 border-b border-light-border dark:border-dark-border">
               <div className="flex items-center gap-2">
                 <div className={`p-2 ${colorClass.bgLight} rounded-lg`}>
                   <Key className={`w-4 h-4 ${colorClass.text}`} />
                 </div>
-                <h2 className="text-lg font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
                   添加 API 密钥
                 </h2>
               </div>
@@ -873,10 +873,10 @@ export default function ProvidersSettingsPage() {
             {/* 弹窗内容 */}
             <div className="p-6 space-y-4">
               {/* 供应商信息 */}
-              <div className="p-3 bg-[#f5f5f7] dark:bg-black rounded-lg">
+              <div className="p-3 bg-light-page dark:bg-dark-page rounded-lg">
                 <div className="flex items-center gap-2">
                   {getProviderIconComponent(currentProvider?.id || 'deepseek', 20, '')}
-                  <span className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
                     {currentProvider?.name}
                   </span>
                 </div>
@@ -884,7 +884,7 @@ export default function ProvidersSettingsPage() {
 
               {/* API Key 输入 */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+                <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-2">
                   API Key
                 </label>
                 <input
@@ -892,14 +892,14 @@ export default function ProvidersSettingsPage() {
                   value={newKeyValue}
                   onChange={(e) => setNewKeyValue(e.target.value)}
                   placeholder={currentProvider?.keyPrefix ? `例如: ${currentProvider.keyPrefix}...` : 'sk-...'}
-                  className="w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 bg-light-page dark:bg-dark-page rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
                   autoFocus
                 />
               </div>
 
               {/* 可选名称 */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+                <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-2">
                   名称（可选）
                 </label>
                 <input
@@ -907,7 +907,7 @@ export default function ProvidersSettingsPage() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder="如：工作账号"
-                  className="w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 bg-light-page dark:bg-dark-page rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
                 />
               </div>
 
@@ -940,12 +940,12 @@ export default function ProvidersSettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-[330px]">
             {/* 弹窗头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+            <div className="flex items-center justify-between p-6 border-b border-light-border dark:border-dark-border">
               <div className="flex items-center gap-2">
                 <div className={`p-2 ${colorClass.bgLight} rounded-lg`}>
                   <Key className={`w-4 h-4 ${colorClass.text}`} />
                 </div>
-                <h2 className="text-lg font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
                   编辑 API 密钥
                 </h2>
               </div>
@@ -965,10 +965,10 @@ export default function ProvidersSettingsPage() {
             {/* 弹窗内容 */}
             <div className="p-6 space-y-4">
               {/* 供应商信息 */}
-              <div className="p-3 bg-[#f5f5f7] dark:bg-black rounded-lg">
+              <div className="p-3 bg-light-page dark:bg-dark-page rounded-lg">
                 <div className="flex items-center gap-2">
                   {getProviderIconComponent(currentProvider?.id || 'deepseek', 20, "")}
-                  <span className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
                     {currentProvider?.name}
                   </span>
                 </div>
@@ -976,7 +976,7 @@ export default function ProvidersSettingsPage() {
 
               {/* API Key 输入 */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+                <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-2">
                   API Key
                 </label>
                 <input
@@ -984,14 +984,14 @@ export default function ProvidersSettingsPage() {
                   value={newKeyValue}
                   onChange={(e) => setNewKeyValue(e.target.value)}
                   placeholder={currentProvider?.keyPrefix ? `例如: ${currentProvider.keyPrefix}...` : 'sk-...'}
-                  className="w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 bg-light-page dark:bg-dark-page rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
                   autoFocus
                 />
               </div>
 
               {/* 可选名称 */}
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+                <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-2">
                   名称（可选）
                 </label>
                 <input
@@ -999,7 +999,7 @@ export default function ProvidersSettingsPage() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder="如：工作账号"
-                  className="w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 bg-light-page dark:bg-dark-page rounded-xl border-2 border-transparent focus:border-primary-500 outline-none transition-all text-sm"
                 />
               </div>
 
@@ -1032,12 +1032,12 @@ export default function ProvidersSettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-[330px]">
             {/* 弹窗头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+            <div className="flex items-center justify-between p-6 border-b border-light-border dark:border-dark-border">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-red-500/10 rounded-lg">
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </div>
-                <h2 className="text-lg font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
                   删除密钥
                 </h2>
               </div>
@@ -1048,7 +1048,7 @@ export default function ProvidersSettingsPage() {
                 }}
                 className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all"
               >
-                <X className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
+                <X className="w-5 h-5 text-light-text-secondary dark:text-dark-text-secondary" />
               </button>
             </div>
 
@@ -1056,14 +1056,14 @@ export default function ProvidersSettingsPage() {
             <div className="p-6 space-y-4">
               {/* 警告图标和提示 */}
               <div className="flex items-start gap-3">
-                <div className="p-3 bg-red-500/10 rounded-xl flex-shrink-0">
+                <div className="p-3 bg-red-500/10 rounded-xl shrink-0">
                   <AlertCircle className="w-6 h-6 text-red-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+                  <p className="text-[15px] font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
                     确定要删除这个密钥吗？
                   </p>
-                  <p className="text-[13px] text-[#86868b] dark:text-[#8e8e93]">
+                  <p className="text-[13px] text-light-text-secondary dark:text-dark-text-secondary">
                     此操作无法撤销，删除后该密钥将无法恢复。
                   </p>
                 </div>
@@ -1071,10 +1071,10 @@ export default function ProvidersSettingsPage() {
 
               {/* 要删除的密钥信息 */}
               {deletingKeyId && (
-                <div className="p-3 bg-[#f5f5f7] dark:bg-black rounded-lg">
+                <div className="p-3 bg-light-page dark:bg-dark-page rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Key className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
-                    <span className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <Key className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
+                    <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
                       {keys.find(k => k.id === deletingKeyId)?.name}
                     </span>
                   </div>

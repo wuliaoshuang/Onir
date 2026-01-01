@@ -165,15 +165,15 @@ function DashboardPage() {
   };
 
   return (
-    <div className="flex-1 h-svh flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black overflow-hidden">
+    <div className="flex-1 h-svh flex flex-col min-w-0 bg-light-page dark:bg-dark-page overflow-hidden">
       <PageHeader
         title="概览"
         subtitle="欢迎回来，主人"
         actions={
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-sm">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-sm">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[13px] text-[#86868b] dark:text-[#8e8e93]">
+              <span className="text-[13px] text-light-text-secondary dark:text-dark-text-secondary">
                 系统正常
               </span>
             </div>
@@ -195,7 +195,7 @@ function DashboardPage() {
               return (
                 <div
                   key={card.id}
-                  className="group relative bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
+                  className="group relative bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
                   onMouseEnter={() => setHoveredCard(card.id)}
                   onMouseLeave={() => setHoveredCard(null)}
                 >
@@ -217,7 +217,7 @@ function DashboardPage() {
                         className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium ${
                           card.change.startsWith("+")
                             ? "bg-emerald-500/10 text-emerald-500"
-                            : "bg-[#86868b]/10 text-[#86868b]"
+                            : "bg-[#86868b]/10 text-light-text-secondary"
                         }`}
                       >
                         {card.change}
@@ -226,10 +226,10 @@ function DashboardPage() {
                         )}
                       </span>
                     </div>
-                    <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                    <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                       {card.title}
                     </p>
-                    <p className="text-[20px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <p className="text-[20px] font-bold text-light-text-primary dark:text-dark-text-primary">
                       {card.value}
                     </p>
                   </div>
@@ -243,7 +243,7 @@ function DashboardPage() {
             {/* 快捷操作 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <h2 className="text-[13px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                   快捷操作
                 </h2>
               </div>
@@ -254,7 +254,7 @@ function DashboardPage() {
                     <button
                       key={action.id}
                       onClick={() => navigate({ to: action.to as any })}
-                      className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 text-left hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
+                      className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 text-left hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
                     >
                       <div className="flex items-center gap-3">
                         <div
@@ -264,14 +264,14 @@ function DashboardPage() {
                           <Icon className="w-4.5 h-4.5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-0.5">
+                          <p className="text-[13px] font-medium text-light-text-primary dark:text-dark-text-primary mb-0.5">
                             {action.title}
                           </p>
-                          <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] truncate">
+                          <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary truncate">
                             {action.description}
                           </p>
                         </div>
-                        <ArrowUpRight className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93] group-hover:text-primary-500 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300 shrink-0" />
+                        <ArrowUpRight className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary group-hover:text-primary-500 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300 shrink-0" />
                       </div>
                     </button>
                   );
@@ -282,14 +282,14 @@ function DashboardPage() {
             {/* 最近活动 - 桌面应用优化 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <h2 className="text-[13px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                   最近活动
                 </h2>
                 <button className="text-[12px] text-primary-500 hover:underline">
                   查看全部
                 </button>
               </div>
-              <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 divide-y divide-[#e5e5ea] dark:divide-[#3a3a3c]">
+              <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 divide-y divide-[#e5e5ea] dark:divide-[#3a3a3c]">
                 {recentActivities.map((activity, index) => {
                   const icons = {
                     chat: MessageSquare,
@@ -315,11 +315,11 @@ function DashboardPage() {
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                        <p className="text-[13px] text-light-text-primary dark:text-dark-text-primary truncate">
                           {activity.action}
                         </p>
                       </div>
-                      <span className="text-[11px] text-[#86868b] dark:text-[#8e8e93] whitespace-nowrap shrink-0">
+                      <span className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary whitespace-nowrap shrink-0">
                         {activity.time}
                       </span>
                     </div>
@@ -332,7 +332,7 @@ function DashboardPage() {
           {/* 系统状态 - 桌面应用优化 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+              <h2 className="text-[13px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                 服务状态
               </h2>
               <button className="flex items-center gap-1.5 text-[12px] text-primary-500 hover:underline">
@@ -344,7 +344,7 @@ function DashboardPage() {
               {systemStatus.map((service, index) => (
                 <div
                   key={service.id}
-                  className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
+                  className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
                   style={{
                     animation: `fadeInUp 0.3s ease-out ${index * 0.1}s both`,
                   }}
@@ -363,7 +363,7 @@ function DashboardPage() {
                         <Activity className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <p className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        <p className="text-[13px] font-medium text-light-text-primary dark:text-dark-text-primary">
                           {service.name}
                         </p>
                         <div className="flex items-center gap-1">
@@ -374,7 +374,7 @@ function DashboardPage() {
                                 : "bg-red-500"
                             } animate-pulse`}
                           />
-                          <span className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                          <span className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                             {service.status === "online" ? "在线" : "离线"}
                           </span>
                         </div>
@@ -383,19 +383,19 @@ function DashboardPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                      <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                    <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                      <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                         延迟
                       </p>
-                      <p className="text-[12px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      <p className="text-[12px] font-bold text-light-text-primary dark:text-dark-text-primary">
                         {service.latency}
                       </p>
                     </div>
-                    <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                      <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                    <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                      <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                         可用性
                       </p>
-                      <p className="text-[12px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      <p className="text-[12px] font-bold text-light-text-primary dark:text-dark-text-primary">
                         {service.uptime}
                       </p>
                     </div>

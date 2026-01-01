@@ -16,6 +16,12 @@ import type { ApiKeysStorage } from '../types/apiKeys'
 
 const STORAGE_PREFIX = 'onir_'
 const KEYS_KEY_V2 = `${STORAGE_PREFIX}api_keys_v2` // 新版本存储键
+const USER_SETTINGS_KEY = `${STORAGE_PREFIX}user_settings` // 🎯 蕾姆：用户设置存储键
+
+// 🎯 蕾姆：用户设置类型定义
+export interface UserSettings {
+  systemPrompt: string  // 用户自定义的系统提示词
+}
 
 export interface SecureStorageService {
   // ========== 旧版 API（保持兼容，迁移后废弃）==========
@@ -28,6 +34,11 @@ export interface SecureStorageService {
   getApiKeysStorage(): Promise<ApiKeysStorage | null>
   setApiKeysStorage(storage: ApiKeysStorage): Promise<void>
   deleteApiKeysStorage(): Promise<void>
+
+  // ========== 🎯 蕾姆：用户设置 API ==========
+  getUserSettings(): Promise<UserSettings | null>
+  setUserSettings(settings: UserSettings): Promise<void>
+  deleteUserSettings(): Promise<void>
 
   // ========== 迁移工具 ==========
   migrateOldKey(): Promise<void>
@@ -151,6 +162,31 @@ class EncryptedStorage implements SecureStorageService {
    */
   async deleteApiKeysStorage(): Promise<void> {
     this.removeItem(KEYS_KEY_V2)
+  }
+
+  // ========================================
+  // 🎯 蕾姆：用户设置 API
+  // ========================================
+
+  /**
+   * 获取用户设置
+   */
+  async getUserSettings(): Promise<UserSettings | null> {
+    return await this.loadEncrypted<UserSettings>(USER_SETTINGS_KEY)
+  }
+
+  /**
+   * 保存用户设置
+   */
+  async setUserSettings(settings: UserSettings): Promise<void> {
+    await this.saveEncrypted(USER_SETTINGS_KEY, settings)
+  }
+
+  /**
+   * 删除用户设置
+   */
+  async deleteUserSettings(): Promise<void> {
+    this.removeItem(USER_SETTINGS_KEY)
   }
 
   // ========================================

@@ -146,7 +146,7 @@ function UIPage() {
   ];
 
   return (
-    <div className="flex-1 h-svh flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black overflow-hidden">
+    <div className="flex-1 h-svh flex flex-col min-w-0 bg-light-page dark:bg-dark-page overflow-hidden">
       <PageHeader
         title="用户界面"
         subtitle="个性化外观和体验"
@@ -157,10 +157,10 @@ function UIPage() {
         <div className="max-w-full mx-auto p-4 space-y-4">
           {/* 主题选择 */}
           <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
               主题模式
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 divide-y sm:divide-y-0 divide-[#e5e5ea] dark:divide-[#3a3a3c]">
                 {themes.map((theme) => {
                   const Icon = theme.icon;
@@ -189,14 +189,14 @@ function UIPage() {
                         className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 transition-all duration-200 ${
                           mode === theme.id
                             ? `${colorClass.bg} shadow-lg ${colorClass.shadow}`
-                            : "bg-[#f5f5f7] dark:bg-black group-hover:scale-110"
+                            : "bg-light-page dark:bg-dark-page group-hover:scale-110"
                         }`}
                       >
                         <Icon
                           className={`w-5 h-5 ${
                             mode === theme.id
                               ? "text-white"
-                              : "text-[#86868b] dark:text-[#8e8e93]"
+                              : "text-light-text-secondary dark:text-dark-text-secondary"
                           }`}
                         />
                       </div>
@@ -204,12 +204,12 @@ function UIPage() {
                         className={`text-[13px] font-semibold mb-0.5 ${
                           mode === theme.id
                             ? `${colorClass.text}`
-                            : "text-[#1d1d1f] dark:text-[#f5f5f7]"
+                            : "text-light-text-primary dark:text-dark-text-primary"
                         }`}
                       >
                         {theme.name}
                       </h3>
-                      <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                      <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                         {theme.description}
                       </p>
                     </button>
@@ -221,10 +221,10 @@ function UIPage() {
 
           {/* 主题色选择 */}
           <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
               主题色
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
               <div className="flex flex-wrap gap-3">
                 {Object.values(ACCENT_COLORS).map((item, index) => (
                   <button
@@ -254,7 +254,7 @@ function UIPage() {
                       className={`text-[11px] font-medium ${
                         accentColor === item.id
                           ? `${colorClass.text}`
-                          : "text-[#86868b] dark:text-[#8e8e93]"
+                          : "text-light-text-secondary dark:text-dark-text-secondary"
                       }`}
                     >
                       {item.name}
@@ -267,19 +267,19 @@ function UIPage() {
 
           {/* 字体设置 */}
           <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
               字体设置
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-[#f5f5f7] dark:bg-black flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-light-page dark:bg-dark-page flex items-center justify-center">
                   <Type className={`w-5 h-5 ${colorClass.text}`} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <h3 className="text-[13px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                     字体大小
                   </h3>
-                  <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                  <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                     调整全局文字大小
                   </p>
                 </div>
@@ -298,9 +298,9 @@ function UIPage() {
                   const newSize = Number(e.target.value);
                   setFontSize(newSize);
                 }}
-                className="w-full h-2 bg-[#f5f5f7] dark:bg-black rounded-lg appearance-none cursor-pointer accent-[var(--primary)]"
+                className="w-full h-2 bg-light-page dark:bg-dark-page rounded-lg appearance-none cursor-pointer accent-[var(--primary)]"
               />
-              <div className="flex justify-between text-[11px] text-[#86868b] dark:text-[#8e8e93] mt-2 px-1">
+              <div className="flex justify-between text-[11px] text-light-text-secondary dark:text-dark-text-secondary mt-2 px-1">
                 <span>小 (12px)</span>
                 <span>标准 (16px)</span>
                 <span>大 (20px)</span>
@@ -310,20 +310,20 @@ function UIPage() {
 
           {/* 界面特效 */}
           <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
               界面特效
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-light-border dark:border-dark-border">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#f5f5f7] dark:bg-black flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-light-page dark:bg-dark-page flex items-center justify-center">
                     <Sparkles className={`w-5 h-5 ${colorClass.text}`} />
                   </div>
                   <div>
-                    <h3 className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <h3 className="text-[13px] font-medium text-light-text-primary dark:text-dark-text-primary">
                       动画效果
                     </h3>
-                    <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                    <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                       启用界面过渡动画
                     </p>
                   </div>
@@ -336,14 +336,14 @@ function UIPage() {
               </div>
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#f5f5f7] dark:bg-black flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-light-page dark:bg-dark-page flex items-center justify-center">
                     <Monitor className={`w-5 h-5 ${colorClass.text}`} />
                   </div>
                   <div>
-                    <h3 className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <h3 className="text-[13px] font-medium text-light-text-primary dark:text-dark-text-primary">
                       高刷新率模式
                     </h3>
-                    <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                    <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                       优化高刷屏显示效果
                     </p>
                   </div>

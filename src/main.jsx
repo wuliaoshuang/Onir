@@ -5,7 +5,7 @@
  */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { RouterProvider, createRouter, createMemoryHistory } from '@tanstack/react-router'
 import './index.css'
 
 // ========== 国际化初始化 ==========
@@ -15,18 +15,27 @@ import { useLocaleStore } from './stores/localeStore'
 // 生成的路由树
 import { routeTree } from './routeTree.gen'
 
+// 🎯 蕾姆：Electron 使用 Memory History
+// 因为 file:// 协议不支持 HTML5 History API
+const memoryHistory = createMemoryHistory({
+  initialEntries: ['/'],
+})
+
 // 创建路由实例
 const router = createRouter({
   routeTree,
+  history: memoryHistory,
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,
 })
 
-// 🎯 蕾姆：打印路由信息，帮助调试
-console.log('🔍 蕾姆：路由配置 =', {
-  basepath: router.options.basepath,
-  history: router.history.location.href,
-})
+// 🎯 蕾姆：只在开发环境打印路由信息
+if (import.meta.env.DEV) {
+  console.log('🔍 蕾姆：路由配置 =', {
+    basepath: router.options.basepath,
+    history: router.history.location.href,
+  })
+}
 
 // ========== 初始化组件 ==========
 function AppWithProviders() {
@@ -42,7 +51,5 @@ function AppWithProviders() {
 }
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
     <AppWithProviders />
-  </StrictMode>,
 )

@@ -75,7 +75,7 @@ function NetworkPage() {
   };
 
   return (
-    <div className="flex-1 h-svh flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black overflow-hidden">
+    <div className="flex-1 h-svh flex flex-col min-w-0 bg-light-page dark:bg-dark-page overflow-hidden">
       <PageHeader
         title="网络"
         subtitle="代理和连接配置"
@@ -97,7 +97,7 @@ function NetworkPage() {
         <div className="max-w-full mx-auto p-4 space-y-4">
           {/* 网络状态概览 - 桌面应用优化 */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110"
@@ -106,16 +106,16 @@ function NetworkPage() {
                   <Globe className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                  <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                     连接状态
                   </p>
-                  <p className="text-[18px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <p className="text-[18px] font-bold text-light-text-primary dark:text-dark-text-primary">
                     正常
                   </p>
                 </div>
               </div>
             </div>
-            <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center gap-3">
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110"
@@ -124,16 +124,16 @@ function NetworkPage() {
                   <Activity className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                  <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                     平均延迟
                   </p>
-                  <p className="text-[18px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <p className="text-[18px] font-bold text-light-text-primary dark:text-dark-text-primary">
                     217ms
                   </p>
                 </div>
               </div>
             </div>
-            <div className="group bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="group bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
               <div className="flex items-center gap-3">
                 <div
                   className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-lg transition-all duration-200 ${
@@ -149,15 +149,15 @@ function NetworkPage() {
                     className={`w-5 h-5 ${
                       proxyEnabled
                         ? "text-white"
-                        : "text-[#86868b] dark:text-[#8e8e93]"
+                        : "text-light-text-secondary dark:text-dark-text-secondary"
                     }`}
                   />
                 </div>
                 <div>
-                  <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                  <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                     代理状态
                   </p>
-                  <p className="text-[18px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  <p className="text-[18px] font-bold text-light-text-primary dark:text-dark-text-primary">
                     {proxyEnabled ? "已启用" : "未启用"}
                   </p>
                 </div>
@@ -167,12 +167,12 @@ function NetworkPage() {
 
           {/* 代理设置 - 桌面应用优化 */}
           <div>
-            <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] px-3 mb-1.5 font-medium tracking-wide uppercase">
+            <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary px-3 mb-1.5 font-medium tracking-wide uppercase">
               代理设置
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
               {/* 启用代理 */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#e5e5ea] dark:border-[#3a3a3c]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-light-border dark:border-dark-border">
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200`}
@@ -186,15 +186,15 @@ function NetworkPage() {
                       className={`w-5 h-5 ${
                         proxyEnabled
                           ? "text-white"
-                          : "text-[#86868b] dark:text-[#8e8e93]"
+                          : "text-light-text-secondary dark:text-dark-text-secondary"
                       }`}
                     />
                   </div>
                   <div>
-                    <p className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <p className="text-[13px] font-medium text-light-text-primary dark:text-dark-text-primary">
                       启用代理
                     </p>
-                    <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                    <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                       通过代理服务器访问 AI 服务
                     </p>
                   </div>
@@ -209,23 +209,23 @@ function NetworkPage() {
               {/* 服务器地址 */}
               <div className="p-4 space-y-3">
                 <div>
-                  <label className="text-[11px] font-medium text-[#86868b] dark:text-[#8e8e93] mb-1.5 block">
+                  <label className="text-[11px] font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1.5 block">
                     服务器地址
                   </label>
                   <input
                     type="text"
                     placeholder="127.0.0.1"
-                    className="w-full px-3 py-2 bg-[#f5f5f7] dark:bg-black rounded-lg text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7] outline-none border-2 border-transparent focus:border-primary-500 transition-all duration-200"
+                    className="w-full px-3 py-2 bg-light-page dark:bg-dark-page rounded-lg text-[13px] text-light-text-primary dark:text-dark-text-primary outline-none border-2 border-transparent focus:border-primary-500 transition-all duration-200"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-medium text-[#86868b] dark:text-[#8e8e93] mb-1.5 block">
+                  <label className="text-[11px] font-medium text-light-text-secondary dark:text-dark-text-secondary mb-1.5 block">
                     端口
                   </label>
                   <input
                     type="number"
                     placeholder="7890"
-                    className="w-full px-3 py-2 bg-[#f5f5f7] dark:bg-black rounded-lg text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7] outline-none border-2 border-transparent focus:border-primary-500 transition-all duration-200"
+                    className="w-full px-3 py-2 bg-light-page dark:bg-dark-page rounded-lg text-[13px] text-light-text-primary dark:text-dark-text-primary outline-none border-2 border-transparent focus:border-primary-500 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -235,7 +235,7 @@ function NetworkPage() {
           {/* 服务状态 - 桌面应用优化 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] px-3 font-medium tracking-wide uppercase">
+              <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary px-3 font-medium tracking-wide uppercase">
                 服务状态
               </p>
             </div>
@@ -243,7 +243,7 @@ function NetworkPage() {
               {services.map((service, index) => (
                 <div
                   key={service.id}
-                  className="group relative bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
+                  className="group relative bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
                   onMouseEnter={() => setHoveredCard(service.id)}
                   onMouseLeave={() => setHoveredCard(null)}
                   style={{
@@ -267,7 +267,7 @@ function NetworkPage() {
                           {service.icon}
                         </div>
                         <div>
-                          <h3 className="text-[14px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-0.5">
+                          <h3 className="text-[14px] font-semibold text-light-text-primary dark:text-dark-text-primary mb-0.5">
                             {service.name}
                           </h3>
                           <div className="flex items-center gap-1">
@@ -278,7 +278,7 @@ function NetworkPage() {
                                   : "bg-red-500"
                               } animate-pulse`}
                             />
-                            <span className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                            <span className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                               {service.status === "connected"
                                 ? "已连接"
                                 : "未连接"}
@@ -290,27 +290,27 @@ function NetworkPage() {
 
                     {/* 统计数据 */}
                     <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                        <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                      <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                        <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                           延迟
                         </p>
-                        <p className="text-[12px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        <p className="text-[12px] font-bold text-light-text-primary dark:text-dark-text-primary">
                           {service.latency}
                         </p>
                       </div>
-                      <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                        <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                      <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                        <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                           区域
                         </p>
-                        <p className="text-[12px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                        <p className="text-[12px] font-bold text-light-text-primary dark:text-dark-text-primary truncate">
                           {service.region}
                         </p>
                       </div>
-                      <div className="px-2 py-1.5 bg-[#f5f5f7] dark:bg-black rounded-lg">
-                        <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] mb-0.5">
+                      <div className="px-2 py-1.5 bg-light-page dark:bg-dark-page rounded-lg">
+                        <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary mb-0.5">
                           可用性
                         </p>
-                        <p className="text-[12px] font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        <p className="text-[12px] font-bold text-light-text-primary dark:text-dark-text-primary">
                           {service.uptime}
                         </p>
                       </div>
@@ -356,10 +356,10 @@ function NetworkPage() {
 
           {/* 网络日志 - 桌面应用优化 */}
           <div>
-            <p className="text-[10px] text-[#86868b] dark:text-[#8e8e93] px-3 mb-1.5 font-medium tracking-wide uppercase">
+            <p className="text-[10px] text-light-text-secondary dark:text-dark-text-secondary px-3 mb-1.5 font-medium tracking-wide uppercase">
               最近活动
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 divide-y divide-[#e5e5ea] dark:divide-[#3a3a3c]">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 divide-y divide-[#e5e5ea] dark:divide-[#3a3a3c]">
               {[
                 {
                   action: "OpenAI API 连接成功",
@@ -401,11 +401,11 @@ function NetworkPage() {
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[13px] text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <p className="text-[13px] text-light-text-primary dark:text-dark-text-primary">
                       {log.action}
                     </p>
                   </div>
-                  <span className="text-[11px] text-[#86868b] dark:text-[#8e8e93] whitespace-nowrap shrink-0">
+                  <span className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary whitespace-nowrap shrink-0">
                     {log.time}
                   </span>
                 </div>

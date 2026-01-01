@@ -13,7 +13,7 @@ export const PROVIDERS: Provider[] = [
   {
     id: 'deepseek',
     name: 'DeepSeek',
-    icon: 'DeepSeek',
+    icon: 'DeepSeek', // DeepSeek 蓝
     color: '#95C0EC', // 蕾姆蓝
     keyPrefix: 'sk-',
     models: [], // 蕾姆更新：通过 API 动态获取

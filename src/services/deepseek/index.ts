@@ -21,7 +21,7 @@ export class DeepSeekClient {
    *
    * @param messages - 消息历史（不含系统消息）
    * @param callbacks - 流式回调函数
-   * @param options - 可选参数（系统提示词、温度等）
+   * @param options - 可选参数（系统提示词、温度、模型等）
    */
   async chat(
     messages: Array<{ role: string; content: string }>,
@@ -30,6 +30,7 @@ export class DeepSeekClient {
       systemPrompt?: string
       temperature?: number
       maxTokens?: number
+      model?: string  // 🎯 蕾姆：支持自定义模型
     }
   ): Promise<void> {
     try {
@@ -40,7 +41,7 @@ export class DeepSeekClient {
           'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: options?.model || 'deepseek-chat',  // 🎯 蕾姆：使用自定义模型或默认模型
           messages: options?.systemPrompt
             ? [{ role: 'system', content: options.systemPrompt }, ...messages]
             : messages,

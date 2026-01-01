@@ -1,45 +1,19 @@
 /**
  * 蕾姆精心设计的聊天页面
- * 从 App.jsx 重构而来，使用 Zustand 状态管理
- * 使用 react-resizable-panels 实现可调整大小的面板布局
- * ~~支持双窗口架构：主窗口显示聊天，设置窗口独立显示~~（Electron 版本待实现）
+ * 🎯 header 放在 Allotment 里面，给右侧面板留空间
+ * 🎯 悬浮按钮：竖向排列的圆形图标按钮
+ * 🎯 使用 Framer Motion 添加平滑动画
  */
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import {
-  Panel,
-  Group,
-  Separator,
-} from "react-resizable-panels";
-// import { invoke } from "@tauri-apps/api/core"; // 蕾姆：已移除 Tauri 依赖
-import {
-  Send,
-  Plus,
-  Code,
-  Image,
-  FileText,
-  Settings,
-  Copy,
-  Check,
-  Ellipsis,
-  MessageSquare,
-  Paperclip,
-  Mic,
-  Sticker,
-  X,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Menu,
-  Square,
-  GripVertical,
-  FileTerminal,
-  Files,
-  Eye,
-} from "lucide-react";
-import { MessageContent } from "../components/MessageContent";
-import { StreamingMessage } from "../components/StreamingMessage";
+import { useState, useCallback } from "react";
+import { Allotment } from "allotment";
+import "allotment/dist/style.css";
+import { AnimatePresence, motion } from "framer-motion";
+import { Menu, FileTerminal, Files, Eye, X } from "lucide-react";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { Button } from "../components/ui/Button";
+import { EmptyState } from "../components/EmptyState";
+import { ScrollableMessageList } from "../components/ScrollableMessageList";
+import { FloatingPanelButtons } from "../components/FloatingPanelButtons";
 import { useChatStore, selectActiveMessages } from "../stores/chatStore";
 import { useUIStore } from "../stores/uiStore";
 import { useApiKeyStore } from "../stores/apiKeyStore";
@@ -47,292 +21,105 @@ import { useDeepSeekChat } from "../hooks/useDeepSeekChat";
 import InputArea from "../components/InputArea";
 
 function ChatPage() {
-  const navigate = useNavigate();
+  const activeConversationId = useChatStore(
+    (state) => state.activeConversationId
+  );
   const messages = useChatStore(selectActiveMessages);
-  const { addMessage, createConversation, isGenerating } = useChatStore();
-  const { copiedMessageId, setCopiedMessageId, copyToClipboard } = useUIStore();
-  const { isConfigured } = useApiKeyStore();
+  const {
+    createConversation,
+    setActiveConversation,
+    getConversationModel,
+    setConversationModel,
+    // 🎯 蕾姆：右侧面板状态管理
+    setConversationPanelVisible,
+    setConversationPanelTab,
+    openConversationPanelWithTab,
+  } = useChatStore();
+  const { copiedMessageId, copyToClipboard } = useUIStore();
+  const { getDefaultModel } = useApiKeyStore();
 
-  const { sendMessage } = useDeepSeekChat();
+  // 🎯 蕾姆：判断是否有活动会话
+  const hasConversation = !!activeConversationId;
+
+  // 🎯 蕾姆：创建新对话的处理函数
+  const handleNewChat = () => {
+    const newId = createConversation();
+    setActiveConversation(newId);
+  };
+
+  // 🎯 蕾姆：模型管理
+  const currentModel = activeConversationId
+    ? getConversationModel(activeConversationId) || getDefaultModel() || ""
+    : getDefaultModel() || "";
+
+  const handleModelChange = (model: string) => {
+    if (activeConversationId) {
+      setConversationModel(activeConversationId, model);
+    }
+  };
+
+  // 🎯 蕾姆：使用新的 Hook，传入 conversationId
+  const { sendMessage, abort, isGenerating } = useDeepSeekChat({
+    conversationId: activeConversationId || "default",
+  });
 
   const [input, setInput] = useState("");
 
-  // 面板状态 - 蕾姆新增：右侧工具面板控制
-  const [rightPanelVisible, setRightPanelVisible] = useState(true);
-  const [rightPanelActiveTab, setRightPanelActiveTab] = useState<'files' | 'terminal' | 'preview'>('files');
-
-  // 光标状态
-  const [isFocused, setIsFocused] = useState(false);
-  const [caretVisible, setCaretVisible] = useState(false);
-  const [tailActive, setTailActive] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [caretHeight, setCaretHeight] = useState(22);
-  const [caretPosition, setCaretPosition] = useState({ x: 0, y: 0 });
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const mirrorRef = useRef<HTMLDivElement>(null);
-  const lastPosRef = useRef({ x: 0, y: 0 });
-  const tailTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const focusCooldownRef = useRef(false);
-
-  const targetPosRef = useRef({ x: 0, y: 0 });
-  const moveDirectionRef = useRef(1);
-
-  // 同步 mirror 样式
-  const syncMirrorStyle = () => {
-    const textarea = textareaRef.current;
-    const mirror = mirrorRef.current;
-    if (!textarea || !mirror) return;
-
-    const computed = window.getComputedStyle(textarea);
-
-    const properties = [
-      "fontFamily",
-      "fontSize",
-      "fontWeight",
-      "fontStyle",
-      "letterSpacing",
-      "lineHeight",
-      "textTransform",
-      "wordSpacing",
-      "paddingTop",
-      "paddingBottom",
-      "paddingLeft",
-      "paddingRight",
-      "borderLeftWidth",
-      "borderRightWidth",
-      "borderTopWidth",
-      "borderBottomWidth",
-      "width",
-      "maxWidth",
-      "whiteSpace",
-      "wordWrap",
-      "textAlign",
-      "textIndent",
-      "boxSizing",
-    ];
-
-    properties.forEach((prop) => {
-      mirror.style[prop as any] = computed[prop as any];
-    });
-  };
-
-  const calculateCaretHeight = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return 22;
-
-    const computed = window.getComputedStyle(textarea);
-    const fontSize = parseFloat(computed.fontSize);
-    const lineHeight = computed.lineHeight;
-
-    let height;
-    if (lineHeight === "normal") {
-      height = fontSize * 1.2;
-    } else {
-      height = parseFloat(lineHeight);
-    }
-
-    return Math.max(18, Math.min(height, 40));
-  };
-
-  const isCaretVisible = (rawX: number, rawY: number) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return true;
-
-    const computed = window.getComputedStyle(textarea);
-    const paddingTop = parseFloat(computed.paddingTop);
-    const paddingBottom = parseFloat(computed.paddingBottom);
-    const paddingLeft = parseFloat(computed.paddingLeft);
-    const paddingRight = parseFloat(computed.paddingRight);
-
-    const viewportTop = textarea.scrollTop;
-    const viewportBottom = textarea.scrollTop + textarea.clientHeight;
-    const viewportLeft = textarea.scrollLeft;
-    const viewportRight = textarea.scrollLeft + textarea.clientWidth;
-
-    const contentTop = paddingTop;
-    const contentBottom = textarea.scrollHeight - paddingBottom;
-    const contentLeft = paddingLeft;
-    const contentRight = textarea.scrollWidth - paddingRight;
-
-    const caretTop = rawY;
-    const caretBottom = rawY + caretHeight;
-    const caretLeft = rawX;
-    const caretRight = rawX + 2.5;
-
-    const inContentY = caretTop >= contentTop && caretTop < contentBottom;
-    const inContentX = caretLeft >= contentLeft && caretLeft < contentRight;
-
-    const tolerance = 2;
-    const isVisibleY =
-      caretBottom > viewportTop + tolerance &&
-      caretTop < viewportBottom - tolerance;
-    const isVisibleX =
-      caretRight > viewportLeft + tolerance &&
-      caretLeft < viewportRight - tolerance;
-
-    return inContentY && inContentX && isVisibleY && isVisibleX;
-  };
-
-  const getCaretPosition = () => {
-    const textarea = textareaRef.current;
-    const mirror = mirrorRef.current;
-    if (!textarea || !mirror)
-      return { x: 0, y: 0, height: 22, rawX: 0, rawY: 0 };
-
-    const computed = window.getComputedStyle(textarea);
-    const height = calculateCaretHeight();
-    setCaretHeight(height);
-
-    const textareaOffsetX = textarea.offsetLeft;
-    const textareaOffsetY = textarea.offsetTop;
-
-    const properties = [
-      "fontFamily",
-      "fontSize",
-      "fontWeight",
-      "fontStyle",
-      "letterSpacing",
-      "lineHeight",
-      "textTransform",
-      "wordSpacing",
-      "whiteSpace",
-      "wordWrap",
-      "textAlign",
-      "paddingTop",
-      "paddingBottom",
-      "paddingLeft",
-      "paddingRight",
-      "borderWidth",
-      "boxSizing",
-    ];
-    properties.forEach((prop) => {
-      mirror.style[prop as any] = computed[prop as any];
-    });
-
-    mirror.style.width = textarea.clientWidth + "px";
-
-    const textBeforeCaret = textarea.value.substring(
-      0,
-      textarea.selectionStart
+  // 🎯 蕾姆：会话独立的面板状态（使用选择器订阅变化）
+  const panelVisible = useChatStore((state) => {
+    const conversation = state.conversations.find(
+      (c) => c.id === activeConversationId
     );
-    mirror.textContent = textBeforeCaret;
+    return conversation?.rightPanel?.visible ?? false;
+  });
+  const panelActiveTab = useChatStore((state) => {
+    const conversation = state.conversations.find(
+      (c) => c.id === activeConversationId
+    );
+    return conversation?.rightPanel?.activeTab ?? "files";
+  });
 
-    const span = document.createElement("span");
-    span.textContent = "|";
-    mirror.appendChild(span);
+  // 🎯 蕾姆：延迟移除状态，让 exit 动画有时间播放
+  const [isPanelAnimatingOut, setIsPanelAnimatingOut] = useState(false);
 
-    const rawX = span.offsetLeft;
-    const rawY = span.offsetTop;
+  // 🎯 蕾姆：计算面板是否应该渲染（动画期间也要渲染）
+  const shouldRenderPanel = panelVisible || isPanelAnimatingOut;
 
-    const x = rawX + textareaOffsetX - textarea.scrollLeft;
-    const y = rawY + textareaOffsetY - textarea.scrollTop;
+  // 🎯 蕾姆：面板默认关闭，Allotment 控制宽度
+  const defaultSizes = panelVisible ? [70, 30] : [100, 0];
 
-    mirror.removeChild(span);
+  // 🎯 蕾姆：打开面板并切换 tab 的回调
+  const handleOpenPanel = useCallback(
+    (tab: "files" | "terminal" | "preview") => {
+      if (activeConversationId) {
+        openConversationPanelWithTab(activeConversationId, tab);
+      }
+    },
+    [activeConversationId, openConversationPanelWithTab]
+  );
 
-    return { x, y, height, rawX, rawY };
-  };
-
-  const autoGrowTextarea = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    textarea.style.height = "auto";
-    const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 240);
-    textarea.style.height = newHeight + "px";
-  };
-
-  const updateCaret = (isInputEvent = false, enableTail = true) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const pos = getCaretPosition();
-
-    const dx = pos.x - lastPosRef.current.x;
-    if (dx > 0.5) {
-      moveDirectionRef.current = 1;
-    } else if (dx < -0.5) {
-      moveDirectionRef.current = -1;
+  // 🎯 蕾姆：关闭面板的回调 - 先触发动画，再延迟关闭
+  const handleClosePanel = useCallback(() => {
+    if (activeConversationId) {
+      // 1. 先设置状态为 false（触发 Allotment 宽度动画）
+      setConversationPanelVisible(activeConversationId, false);
+      // 2. 延迟后让 motion.div 完成 exit 动画
+      setIsPanelAnimatingOut(true);
+      setTimeout(() => {
+        setIsPanelAnimatingOut(false);
+      }, 300); // 与 transition duration 一致
     }
+  }, [activeConversationId, setConversationPanelVisible]);
 
-    const dy = pos.y - lastPosRef.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (enableTail && !focusCooldownRef.current && distance > 3) {
-      setTailActive(true);
-      if (tailTimeoutRef.current) clearTimeout(tailTimeoutRef.current);
-      tailTimeoutRef.current = setTimeout(() => setTailActive(false), 150);
-    }
-
-    lastPosRef.current = pos;
-
-    targetPosRef.current = {
-      x: pos.x,
-      y: pos.y,
-    };
-
-    if (isInputEvent) {
-      setIsTyping(true);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 800);
-    }
-
-    setCaretPosition(pos);
-
-    if (isFocused) {
-      const visible = isCaretVisible(pos.rawX, pos.rawY);
-      setCaretVisible(visible);
-    }
-  };
-
-  useEffect(() => {
-    syncMirrorStyle();
-    const handleResize = () => {
-      syncMirrorStyle();
-      setCaretHeight(calculateCaretHeight());
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      if (tailTimeoutRef.current) clearTimeout(tailTimeoutRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    updateCaret(true);
-  }, [input]);
-
-  useEffect(() => {
-    autoGrowTextarea();
-  }, [input]);
-
-  const handleInputFocus = () => {
-    setIsFocused(true);
-    syncMirrorStyle();
-
-    setTailActive(false);
-    if (tailTimeoutRef.current) clearTimeout(tailTimeoutRef.current);
-
-    focusCooldownRef.current = true;
-    setTimeout(() => {
-      focusCooldownRef.current = false;
-    }, 200);
-
-    const pos = getCaretPosition();
-    lastPosRef.current = pos;
-    targetPosRef.current = { x: pos.x, y: pos.y };
-    setCaretPosition(pos);
-    setCaretHeight(pos.height);
-
-    const visible = isCaretVisible(pos.rawX, pos.rawY);
-    setCaretVisible(visible);
-  };
-
-  const handleInputBlur = () => {
-    setIsFocused(false);
-    setTimeout(() => setCaretVisible(false), 100);
-  };
+  // 🎯 蕾姆：切换 tab 的回调
+  const handleSetTab = useCallback(
+    (tab: "files" | "terminal" | "preview") => {
+      if (activeConversationId) {
+        setConversationPanelTab(activeConversationId, tab);
+      }
+    },
+    [activeConversationId, setConversationPanelTab]
+  );
 
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;
@@ -343,12 +130,13 @@ function ChatPage() {
     try {
       await sendMessage(userInput);
     } catch (error) {
-      console.error('发送消息失败:', error);
+      console.error("发送消息失败:", error);
+      setInput(userInput);
     }
   };
 
   const handleAbort = () => {
-    useChatStore.getState().abortGeneration();
+    abort();
   };
 
   const handleCopyMessage = (id: number, content: string) => {
@@ -356,269 +144,220 @@ function ChatPage() {
   };
 
   return (
-    <div className="flex-1 h-dvh flex flex-col min-w-0 relative">
-      {/* 顶部栏 - 桌面应用优化高度 */}
-      
-
-      {/* 蕾姆重构：可调整大小的面板布局 */}
-      <Group direction="horizontal" className="flex-1 overflow-hidden">
-        {/* 左侧：聊天面板 */}
-        <Panel
-          defaultSize={70}
-          minSize={40}
-          className="flex flex-col min-w-0"
-        >
-          <header className="h-14 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl flex items-center justify-between px-4 sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <button
-            className="md:hidden p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
-            onClick={() => useUIStore.getState().setMobileSidebarOpen(true)}
-          >
-            <Menu className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
-          </button>
-          <h2 className="text-[14px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
-            新对话
-          </h2>
-        </div>
-        <div className="flex items-center gap-1">
-          {/* 蕾姆新增：右侧面板切换按钮 */}
-          <button
-            onClick={() => setRightPanelVisible(!rightPanelVisible)}
-            className="hidden md:flex p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
-            title={rightPanelVisible ? "隐藏工具面板" : "显示工具面板"}
-          >
-            <PanelLeftOpen className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
-          </button>
-          <ThemeToggle />
-        </div>
-      </header>
-          {/* 消息区域 - 桌面应用优化宽度 */}
-          <div className="flex-1 overflow-y-auto bg-[#f5f5f7] dark:bg-black">
-            <div className="py-2 max-w-3xl mx-auto px-4">
-              {messages.map((message, index) => (
-                <div
-                  key={message.id}
-                  className={`group ${
-                    message.role === "user" ? "flex justify-end py-2" : "py-3"
-                  }`}
-                >
-                  {message.role === "assistant" && (
-                    <div className="flex-1 relative pb-6">
-                      {/* 流式消息组件（最后一条且正在生成） */}
-                      {index === messages.length - 1 && isGenerating ? (
-                        <StreamingMessage
-                          messageId={message.id}
-                          content={message.content}
-                          isStreaming={true}
-                        />
-                      ) : (
-                        <div className="prose prose-sm max-w-none prose-p:break-words prose-a:break-words">
-                          <MessageContent content={message.content} />
-                        </div>
-                      )}
-
-                      {/* 复制按钮 */}
-                      <div className="absolute bottom-0 left-0 flex items-center gap-1">
-                        <button
-                          onClick={() =>
-                            handleCopyMessage(message.id, message.content)
-                          }
-                          className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200 text-[#86868b] dark:text-[#8e8e93] hover:text-primary-500"
-                          title="复制"
-                        >
-                          {copiedMessageId === message.id ? (
-                            <Check className="w-3.5 h-3.5 text-primary-500" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {message.role === "user" && (
-                    <div className="flex justify-end">
-                      <div className="relative group/bubble max-w-[85%] min-w-[120px] w-fit">
-                        <div className="px-4 py-2.5 bg-primary-500 text-white rounded-xl rounded-br-md shadow-lg shadow-primary-500/20 overflow-hidden">
-                          <p className="text-[15px] leading-[1.6] text-white whitespace-pre-wrap break-all">
-                            {message.content}
-                          </p>
-                        </div>
-                        <div className="absolute -bottom-6 right-0 flex items-center gap-1 opacity-0 group-hover/bubble:opacity-100 transition-opacity">
-                          <button
-                            onClick={() =>
-                              handleCopyMessage(message.id, message.content)
-                            }
-                            className="p-1 bg-white dark:bg-[#1c1c1e] rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200 shadow-sm"
-                            title="复制"
-                          >
-                            {copiedMessageId === message.id ? (
-                              <Check className="w-3 h-3 text-primary-500" />
-                            ) : (
-                              <Copy className="w-3 h-3 text-[#86868b] dark:text-[#8e8e93]" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+    <div className="flex-1 h-dvh flex flex-col min-w-0">
+      {/* Allotment 布局 - header 在里面 */}
+      <Allotment
+        key={panelVisible ? "panel-open" : "panel-closed"}
+        defaultSizes={defaultSizes}
+        minSize={0}
+        className="flex-1 overflow-hidden"
+      >
+        {/* 左侧：聊天区域（包含 header） */}
+        <Allotment.Pane className="flex flex-col min-w-0 relative">
+          {/* header - 在 Allotment.Pane 里面 */}
+          <header className="h-14 bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl flex items-center justify-between px-4 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                className="md:hidden p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
+                onClick={() => useUIStore.getState().setMobileSidebarOpen(true)}
+              >
+                <Menu className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
+              </button>
+              <div className="flex items-center gap-2">
+                <h2 className="text-[14px] font-semibold text-light-text-primary dark:text-dark-text-primary tracking-tight">
+                  新对话
+                </h2>
+                {/* 🎯 蕾姆：只在有消息时显示条数 */}
+                {messages.length > 0 && (
+                  <span className="px-2 py-0.5 text-[11px] font-medium bg-black/5 dark:bg-white/10 text-light-text-secondary dark:text-dark-text-secondary rounded-full">
+                    {messages.length} 条
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+            </div>
+          </header>
+
+          {/* 消息区域 */}
+          {hasConversation ? (
+            <ScrollableMessageList
+              messages={messages}
+              isGenerating={isGenerating}
+              copiedMessageId={copiedMessageId}
+              onCopyMessage={handleCopyMessage}
+            />
+          ) : (
+            <div className="flex-1 bg-light-page dark:bg-dark-page">
+              <EmptyState onNewChat={handleNewChat} />
+            </div>
+          )}
 
           {/* 输入区域 */}
-          <div className="relative">
-            {/* 中断按钮 */}
-            {isGenerating && (
-              <button
-                onClick={handleAbort}
-                className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-full text-sm font-medium shadow-lg hover:bg-red-600 transition-all"
-              >
-                <Square className="w-3 h-3" />
-                停止生成
-              </button>
-            )}
-
+          {hasConversation && (
             <InputArea
               input={input}
               setInput={setInput}
               onSend={handleSend}
-              isFocused={isFocused}
-              setIsFocused={setIsFocused}
-              caretVisible={caretVisible}
-              isTyping={isTyping}
-              caretHeight={caretHeight}
-              caretPosition={caretPosition}
-              moveDirection={moveDirectionRef.current}
-              tailActive={tailActive}
-              targetPosition={targetPosRef.current}
-              textareaRef={textareaRef}
-              mirrorRef={mirrorRef}
-              handleInputFocus={handleInputFocus}
-              handleInputBlur={handleInputBlur}
-              updateCaret={updateCaret}
-              disabled={isGenerating}
+              currentModel={currentModel}
+              onModelChange={handleModelChange}
+              isSending={isGenerating}
+              onStop={handleAbort}
             />
-          </div>
-        </Panel>
+          )}
 
-        {/* 蕾姆新增：可拖动的分隔条 */}
-        {rightPanelVisible && (
-          <Separator className="w-1 bg-transparent hover:bg-primary-500/30 transition-colors relative group">
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <GripVertical className="w-4 h-4 text-[#86868b] dark:text-[#8e8e93]" />
-            </div>
-          </Separator>
-        )}
+          {/* 🎯 蕾姆：悬浮按钮组（面板关闭时显示，在聊天区域内） */}
+          <FloatingPanelButtons
+            visible={!panelVisible}
+            onTabClick={handleOpenPanel}
+          />
+        </Allotment.Pane>
 
-        {/* 蕾姆新增：右侧工具面板 */}
-        {rightPanelVisible && (
-          <Panel
-            defaultSize={300}
-            minSize={300}
-            maxSize={1000}
-            className="flex-col bg-white dark:bg-[#1c1c1e] border-l border-black/5 dark:border-white/10"
+        {/* 右侧：工具面板 - CSS 过渡动画 */}
+        {shouldRenderPanel && (
+          <Allotment.Pane
+            minSize={0}
+            className="flex flex-col bg-white dark:bg-dark-card border-l border-black/5 dark:border-white/10 overflow-hidden"
           >
-            {/* 工具面板头部 */}
-            <div className="h-12 border-b border-black/5 dark:border-white/10 flex items-center px-4 gap-2">
-              <Button
-                variant={rightPanelActiveTab === 'files' ? 'primary' : 'ghost'}
-                size="sm"
-                icon={Files}
-                onClick={() => setRightPanelActiveTab('files')}
-              >
-                文件
-              </Button>
-              <Button
-                variant={rightPanelActiveTab === 'terminal' ? 'primary' : 'ghost'}
-                size="sm"
-                icon={FileTerminal}
-                onClick={() => setRightPanelActiveTab('terminal')}
-              >
-                终端
-              </Button>
-              <Button
-                variant={rightPanelActiveTab === 'preview' ? 'primary' : 'ghost'}
-                size="sm"
-                icon={Eye}
-                onClick={() => setRightPanelActiveTab('preview')}
-              >
-                预览
-              </Button>
-            </div>
-
-            {/* 工具面板内容 */}
-            <div className="flex-1 overflow-y-auto">
-              {rightPanelActiveTab === 'files' && (
-                <div className="h-full flex flex-col">
-                  {/* 空状态占位 */}
-                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/10 to-primary-600/10 flex items-center justify-center mb-4">
-                      <Files className="w-8 h-8 text-primary-500" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
-                      文件管理
-                    </h3>
-                    <p className="text-xs text-[#86868b] dark:text-[#8e8e93] leading-relaxed">
-                      管理项目文件和资源
-                    </p>
-                    <div className="mt-6 w-full space-y-2">
-                      <Button variant="primary" size="sm" className="w-full">
-                        上传文件
+            {/* 🎯 蕾姆：motion.div 包裹内容，处理显隐动画 */}
+            <AnimatePresence>
+              {panelVisible && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="flex flex-col h-full"
+                >
+                  {/* 面板头部 */}
+                  <div className="h-14 border-b border-black/5 dark:border-white/10 flex items-center justify-between px-4 flex-shrink-0">
+                    <div className="flex gap-2">
+                      <Button
+                        variant={
+                          panelActiveTab === "files" ? "primary" : "ghost"
+                        }
+                        size="sm"
+                        icon={Files}
+                        onClick={() => handleSetTab("files")}
+                      >
+                        文件
                       </Button>
-                      <Button variant="ghost" size="sm" className="w-full">
-                        新建文件夹
+                      <Button
+                        variant={
+                          panelActiveTab === "terminal" ? "primary" : "ghost"
+                        }
+                        size="sm"
+                        icon={FileTerminal}
+                        onClick={() => handleSetTab("terminal")}
+                      >
+                        终端
+                      </Button>
+                      <Button
+                        variant={
+                          panelActiveTab === "preview" ? "primary" : "ghost"
+                        }
+                        size="sm"
+                        icon={Eye}
+                        onClick={() => handleSetTab("preview")}
+                      >
+                        预览
                       </Button>
                     </div>
+                    <button
+                      onClick={handleClosePanel}
+                      className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded text-light-text-secondary dark:text-dark-text-secondary"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                </div>
-              )}
 
-              {rightPanelActiveTab === 'terminal' && (
-                <div className="h-full flex flex-col">
-                  {/* 终端窗口 */}
-                  <div className="flex-1 bg-[#1d1d1f] rounded-lg m-3 p-4 font-mono text-sm overflow-y-auto">
-                    <div className="text-green-400 mb-2">
-                      <span className="text-white">user</span>@<span className="text-white">onir</span>:<span className="text-blue-400">~</span>$
-                    </div>
-                    <div className="text-[#8e8e93] opacity-80">
-                      欢迎使用 Onir 终端<br/>
-                      输入命令开始使用...
-                    </div>
-                    <div className="mt-3 text-green-400">
-                      <span className="text-white">user</span>@<span className="text-white">onir</span>:<span className="text-blue-400">~</span>$
-                      <span className="animate-pulse">_</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+                  {/* 面板内容 - 内部元素显隐动画 */}
+                  <div className="flex-1 overflow-y-auto relative">
+                    <AnimatePresence mode="wait">
+                      {panelActiveTab === "files" && (
+                        <motion.div
+                          key="files"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="h-full flex flex-col absolute inset-0"
+                        >
+                          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/10 to-primary-600/10 flex items-center justify-center mb-4">
+                              <Files className="w-8 h-8 text-primary-500" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
+                              文件管理
+                            </h3>
+                            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
+                              管理项目文件和资源
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
 
-              {rightPanelActiveTab === 'preview' && (
-                <div className="h-full flex flex-col">
-                  {/* 空状态占位 */}
-                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/10 to-primary-600/10 flex items-center justify-center mb-4">
-                      <Eye className="w-8 h-8 text-primary-500" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
-                      实时预览
-                    </h3>
-                    <p className="text-xs text-[#86868b] dark:text-[#8e8e93] leading-relaxed">
-                      预览代码和内容的渲染效果
-                    </p>
-                    <div className="mt-6 px-4 py-3 bg-primary-500/10 rounded-lg">
-                      <p className="text-xs text-primary-600 dark:text-primary-400 font-medium">
-                        💡 选择一条消息即可预览
-                      </p>
-                    </div>
+                      {panelActiveTab === "terminal" && (
+                        <motion.div
+                          key="terminal"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="h-full flex flex-col absolute inset-0"
+                        >
+                          <div className="flex-1 bg-light-text-primary rounded-lg m-3 p-4 font-mono text-sm overflow-y-auto">
+                            <div className="text-green-400 mb-2">
+                              <span className="text-white">user</span>@
+                              <span className="text-white">onir</span>:
+                              <span className="text-blue-400">~</span>$
+                            </div>
+                            <div className="text-[#8e8e93] opacity-80">
+                              欢迎使用 Onir 终端
+                              <br />
+                              输入命令开始使用...
+                            </div>
+                            <div className="mt-3 text-green-400">
+                              <span className="text-white">user</span>@
+                              <span className="text-white">onir</span>:
+                              <span className="text-blue-400">~</span>$
+                              <span className="animate-pulse">_</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {panelActiveTab === "preview" && (
+                        <motion.div
+                          key="preview"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="h-full flex flex-col absolute inset-0"
+                        >
+                          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/10 to-primary-600/10 flex items-center justify-center mb-4">
+                              <Eye className="w-8 h-8 text-primary-500" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
+                              实时预览
+                            </h3>
+                            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
+                              预览代码和内容的渲染效果
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </div>
+                </motion.div>
               )}
-            </div>
-          </Panel>
+            </AnimatePresence>
+          </Allotment.Pane>
         )}
-      </Group>
+      </Allotment>
     </div>
   );
 }

@@ -90,7 +90,7 @@ export default function WorkspacePage() {
   };
 
   return (
-    <div className="flex-1 h-svh flex flex-col min-w-0 bg-[#f5f5f7] dark:bg-black overflow-hidden">
+    <div className="flex-1 h-svh flex flex-col min-w-0 bg-light-page dark:bg-dark-page overflow-hidden">
       {/* 页面头部 */}
       <PageHeader
         title="工作目录"
@@ -103,14 +103,14 @@ export default function WorkspacePage() {
           {/* 说明卡片 */}
           <div className="bg-primary-500/10 border border-primary-500/20 rounded-xl p-4">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-primary-500/20 flex items-center justify-center shrink-0">
                 <Info className="w-4 h-4 text-primary-600 dark:text-primary-400" />
               </div>
               <div className="flex-1">
-                <h3 className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
+                <h3 className="text-[13px] font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
                   关于工作目录
                 </h3>
-                <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] leading-relaxed">
+                <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
                   新对话将自动使用此目录，而不是创建临时目录。您可以为不同项目设置不同的工作目录。
                 </p>
               </div>
@@ -119,20 +119,20 @@ export default function WorkspacePage() {
 
           {/* 当前工作目录 */}
           <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
               当前工作目录
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#f5f5f7] dark:bg-black flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-light-page dark:bg-dark-page flex items-center justify-center">
                     <Folder className={`w-5 h-5 ${colorClass.text}`} />
                   </div>
                   <div>
-                    <h3 className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <h3 className="text-[13px] font-semibold text-light-text-primary dark:text-dark-text-primary">
                       默认工作目录
                     </h3>
-                    <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                    <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                       新对话将在此目录中创建
                     </p>
                   </div>
@@ -158,15 +158,15 @@ export default function WorkspacePage() {
               </div>
 
               {/* 路径显示 */}
-              <div className="px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-lg">
+              <div className="px-4 py-3 bg-light-page dark:bg-dark-page rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <Folder className={`w-4 h-4 flex-shrink-0 ${colorClass.text}`} />
-                    <p className="text-[12px] text-[#1d1d1f] dark:text-[#f5f5f7] font-mono truncate">
+                    <Folder className={`w-4 h-4 shrink-0 ${colorClass.text}`} />
+                    <p className="text-[12px] text-light-text-primary dark:text-dark-text-primary font-mono truncate">
                       {currentWorkspace}
                     </p>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 bg-primary-500/20 text-primary-600 dark:text-primary-400 rounded font-medium flex-shrink-0 ml-2">
+                  <span className="text-[10px] px-2 py-0.5 bg-primary-500/20 text-primary-600 dark:text-primary-400 rounded font-medium shrink-0 ml-2">
                     Default
                   </span>
                 </div>
@@ -177,23 +177,23 @@ export default function WorkspacePage() {
           {/* 所有工作目录 */}
           {workspaces.length > 0 && (
             <div>
-              <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+              <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
                 所有工作目录 ({workspaces.length})
               </p>
-              <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
+              <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
                 {workspaces.map((workspace, index) => (
                   <div
                     key={index}
                     className={`px-4 py-3 flex items-center justify-between group hover:bg-black/5 dark:hover:bg-white/10 transition-all ${
-                      index !== workspaces.length - 1 ? 'border-b border-[#e5e5ea] dark:border-[#3a3a3c]' : ''
+                      index !== workspaces.length - 1 ? 'border-b border-light-border dark:border-dark-border' : ''
                     }`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-[#f5f5f7] dark:bg-black flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-light-page dark:bg-dark-page flex items-center justify-center shrink-0">
                         <Folder className={`w-5 h-5 ${colorClass.text}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] text-[#1d1d1f] dark:text-[#f5f5f7] font-mono truncate">
+                        <p className="text-[12px] text-light-text-primary dark:text-dark-text-primary font-mono truncate">
                           {workspace}
                         </p>
                       </div>
@@ -232,10 +232,10 @@ export default function WorkspacePage() {
 
           {/* 添加工作目录按钮 */}
           <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
               添加新目录
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 p-4">
               <Button
                 variant="primary"
                 size="md"
@@ -245,7 +245,7 @@ export default function WorkspacePage() {
               >
                 添加工作目录
               </Button>
-              <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] text-center mt-3">
+              <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary text-center mt-3">
                 点击按钮选择一个文件夹作为工作目录
               </p>
             </div>
@@ -253,20 +253,20 @@ export default function WorkspacePage() {
 
           {/* 临时目录设置 */}
           <div>
-            <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93] px-4 mb-2 font-medium tracking-wide uppercase">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary px-4 mb-2 font-medium tracking-wide uppercase">
               临时目录
             </p>
-            <div className="bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
+            <div className="bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-xl shadow-lg shadow-black/5 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#f5f5f7] dark:bg-black flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-light-page dark:bg-dark-page flex items-center justify-center">
                     <FolderOpen className={`w-5 h-5 ${colorClass.text}`} />
                   </div>
                   <div>
-                    <h3 className="text-[13px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <h3 className="text-[13px] font-medium text-light-text-primary dark:text-dark-text-primary">
                       使用临时目录
                     </h3>
-                    <p className="text-[11px] text-[#86868b] dark:text-[#8e8e93]">
+                    <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
                       新对话将创建临时目录，关闭对话后自动清理
                     </p>
                   </div>
@@ -276,7 +276,7 @@ export default function WorkspacePage() {
                   onClick={() => setUseTempDir(!useTempDir)}
                   className={`
                     relative w-11 h-6 rounded-full transition-colors duration-200
-                    ${useTempDir ? 'bg-primary-500' : 'bg-[#e5e5ea] dark:bg-[#3a3a3c]'}
+                    ${useTempDir ? 'bg-primary-500' : 'bg-light-border dark:bg-dark-border'}
                   `}
                 >
                   <span

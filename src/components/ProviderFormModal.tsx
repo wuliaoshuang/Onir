@@ -1,12 +1,22 @@
 /**
- * 蕾姆精心设计的供应商表单模态框
+ * 蕾姆精心重构的供应商表单模态框
+ * ✨ 已迁移到新的 Dialog 系统，使用 Portal + Focus Trap
+ *
  * 用于添加和编辑自定义供应商
  */
 
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
 import { OpenAI, Anthropic, Azure, DeepSeek } from '@lobehub/icons'
 import type { Provider } from '../types/apiKeys'
+import { FormInput, FormTextarea, FormCheckbox } from './ui/Form'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogClose,
+} from './ui/Dialog'
 
 // ========================================
 // 表单数据接口
@@ -25,10 +35,11 @@ interface ProviderFormData {
 // 组件 Props
 // ========================================
 interface ProviderFormModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   title: string
   provider?: Provider // 如果提供，则为编辑模式
   onSubmit: (data: Omit<Provider, 'id' | 'stats' | 'status' | 'isBuiltIn'>) => void
-  onClose: () => void
 }
 
 // ========================================
@@ -59,10 +70,11 @@ const COLOR_OPTIONS = [
 // 主组件
 // ========================================
 export default function ProviderFormModal({
+  open,
+  onOpenChange,
   title,
   provider,
   onSubmit,
-  onClose
 }: ProviderFormModalProps) {
   // 初始化表单数据
   const [formData, setFormData] = useState<ProviderFormData>(() => {
@@ -90,6 +102,31 @@ export default function ProviderFormModal({
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // 当 provider 变化时重置表单
+  useEffect(() => {
+    if (provider) {
+      setFormData({
+        name: provider.name,
+        icon: provider.icon,
+        color: provider.color,
+        baseUrl: provider.baseUrl,
+        requiresEndpoint: provider.requiresEndpoint,
+        keyPrefix: provider.keyPrefix,
+        models: provider.models.join(', '),
+      })
+    } else {
+      setFormData({
+        name: '',
+        icon: 'DeepSeek',
+        color: '#95C0EC',
+        requiresEndpoint: false,
+        keyPrefix: 'sk-',
+        models: '',
+      })
+    }
+    setErrors({})
+  }, [provider, open])
 
   // 蕾姆的表单验证逻辑
   const validate = (): boolean => {
@@ -145,65 +182,42 @@ export default function ProviderFormModal({
       keyPrefix: formData.keyPrefix.trim(),
       models: modelList,
     })
+
+    // 提交成功后关闭对话框
+    onOpenChange(false)
   }
 
-  // 禁用背景滚动
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [])
+  const handleClose = () => {
+    onOpenChange(false)
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-      <div
-        className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl w-full min-w-md max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg" onClose={handleClose}>
         {/* ========================================
             模态框头部
         ======================================== */}
-        <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-[#e5e5ea] dark:border-[#3a3a3c] bg-white dark:bg-[#1c1c1e] z-10">
-          <h2 className="text-lg font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
-            {title}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-[#f5f5f7] dark:hover:bg-black rounded-lg transition-all"
-          >
-            <X className="w-5 h-5 text-[#86868b] dark:text-[#8e8e93]" />
-          </button>
-        </div>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
 
         {/* ========================================
             表单内容
         ======================================== */}
-        <div className="p-6 space-y-5">
+        <DialogBody className="space-y-5">
           {/* 供应商名称 */}
-          <div>
-            <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
-              供应商名称 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="如: OpenAI"
-              className={`w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 transition-all ${
-                errors.name
-                  ? 'border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50'
-                  : 'border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500/50'
-              } text-[#1d1d1f] dark:text-[#f5f5f7] placeholder:text-[#86868b] dark:placeholder:text-[#8e8e93]`}
-            />
-            {errors.name && (
-              <p className="text-red-500 text-sm mt-1.5">{errors.name}</p>
-            )}
-          </div>
+          <FormInput
+            label="供应商名称"
+            required
+            value={formData.name}
+            onChange={(value) => setFormData({ ...formData, name: value })}
+            placeholder="如: OpenAI"
+            error={errors.name}
+          />
 
           {/* 图标选择 */}
           <div>
-            <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+            <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-2">
               图标样式
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -219,27 +233,27 @@ export default function ProviderFormModal({
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all ${
                       isSelected
                         ? 'bg-primary-500/10 border-primary-500'
-                        : 'bg-[#f5f5f7] dark:bg-black border-[#e5e5ea] dark:border-[#3a3a3c] hover:border-primary-500/50'
+                        : 'bg-light-page dark:bg-dark-page border-light-border dark:border-dark-border hover:border-primary-500/50'
                     }`}
                   >
                     <div className="w-6 h-6 flex items-center justify-center">
                       <IconComponent size={24} />
                     </div>
-                    <span className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
                       {option.label}
                     </span>
                   </button>
                 )
               })}
             </div>
-            <p className="text-[12px] text-[#86868b] dark:text-[#8e8e93] mt-1.5">
+            <p className="text-[12px] text-light-text-secondary dark:text-dark-text-secondary mt-1.5">
               选择一个图标样式来代表此供应商
             </p>
           </div>
 
           {/* 颜色选择 */}
           <div>
-            <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+            <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-2">
               主题色
             </label>
             <div className="flex flex-wrap gap-2">
@@ -259,93 +273,65 @@ export default function ProviderFormModal({
           </div>
 
           {/* API 基础 URL（可选） */}
-          <div>
-            <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
-              API 基础 URL（可选）
-            </label>
-            <input
-              type="url"
-              value={formData.baseUrl || ''}
-              onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-              placeholder="如: https://api.openai.com"
-              className="w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all text-[#1d1d1f] dark:text-[#f5f5f7] placeholder:text-[#86868b] dark:placeholder:text-[#8e8e93]"
-            />
-            <p className="text-[12px] text-[#86868b] dark:text-[#8e8e93] mt-1.5">
-              用于兼容 OpenAI API 的第三方服务
-            </p>
-          </div>
+          <FormInput
+            label="API 基础 URL（可选）"
+            type="url"
+            value={formData.baseUrl || ''}
+            onChange={(value) => setFormData({ ...formData, baseUrl: value || undefined })}
+            placeholder="如: https://api.openai.com"
+            helperText="用于兼容 OpenAI API 的第三方服务"
+          />
 
           {/* 需要额外 Endpoint */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl">
-            <input
-              type="checkbox"
-              id="requiresEndpoint"
-              checked={formData.requiresEndpoint}
-              onChange={(e) => setFormData({ ...formData, requiresEndpoint: e.target.checked })}
-              className="w-5 h-5 rounded border-2 border-[#e5e5ea] dark:border-[#3a3a3c] text-primary-500 focus:ring-2 focus:ring-primary-500/50"
-            />
-            <label
-              htmlFor="requiresEndpoint"
-              className="text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] cursor-pointer"
-            >
-              需要额外配置 Endpoint（如 Azure OpenAI）
-            </label>
-          </div>
+          <FormCheckbox
+            checked={formData.requiresEndpoint}
+            onChange={(checked) => setFormData({ ...formData, requiresEndpoint: checked })}
+            label="需要额外配置 Endpoint（如 Azure OpenAI）"
+          />
 
           {/* 密钥前缀 */}
-          <div>
-            <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
-              密钥前缀 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.keyPrefix}
-              onChange={(e) => setFormData({ ...formData, keyPrefix: e.target.value })}
-              placeholder="如: sk-"
-              className={`w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 transition-all ${
-                errors.keyPrefix
-                  ? 'border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50'
-                  : 'border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500/50'
-              } text-[#1d1d1f] dark:text-[#f5f5f7] placeholder:text-[#86868b] dark:placeholder:text-[#8e8e93]`}
-            />
-            {errors.keyPrefix && (
-              <p className="text-red-500 text-sm mt-1.5">{errors.keyPrefix}</p>
-            )}
-          </div>
+          <FormInput
+            label="密钥前缀"
+            required
+            value={formData.keyPrefix}
+            onChange={(value) => setFormData({ ...formData, keyPrefix: value })}
+            placeholder="如: sk-"
+            error={errors.keyPrefix}
+          />
 
           {/* 支持的模型 */}
-          <div>
-            <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
-              支持的模型 <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              value={formData.models}
-              onChange={(e) => setFormData({ ...formData, models: e.target.value })}
-              placeholder="如: gpt-4, gpt-3.5-turbo, claude-3-opus"
-              rows={3}
-              className={`w-full px-4 py-3 bg-[#f5f5f7] dark:bg-black rounded-xl border-2 resize-none transition-all ${
-                errors.models
-                  ? 'border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50'
-                  : 'border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500/50'
-              } text-[#1d1d1f] dark:text-[#f5f5f7] placeholder:text-[#86868b] dark:placeholder:text-[#8e8e93]`}
-            />
-            <p className="text-[12px] text-[#86868b] dark:text-[#8e8e93] mt-1.5">
-              用逗号分隔多个模型名称
-            </p>
-            {errors.models && (
-              <p className="text-red-500 text-sm mt-1.5">{errors.models}</p>
-            )}
-          </div>
+          <FormTextarea
+            label="支持的模型"
+            required
+            value={formData.models}
+            onChange={(value) => setFormData({ ...formData, models: value })}
+            placeholder="如: gpt-4, gpt-3.5-turbo, claude-3-opus"
+            rows={3}
+            error={errors.models}
+            helperText="用逗号分隔多个模型名称"
+          />
 
           {/* 提交按钮 */}
-          <button
-            onClick={handleSubmit}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-black text-primary-500 rounded-xl font-semibold border-2 border-primary-500 hover:bg-primary-500 hover:text-white active:scale-[0.97] transition-all duration-200 shadow-lg"
-          >
-            {provider ? '保存修改' : '添加供应商'}
-          </button>
-        </div>
-      </div>
-    </div>
+          <div className="flex gap-3 pt-2">
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="flex-1 px-4 py-3 bg-light-page dark:bg-dark-page text-light-text-primary dark:text-dark-text-primary rounded-xl hover:bg-light-hover dark:hover:bg-white/5 transition-all font-medium"
+              >
+                取消
+              </button>
+            </DialogClose>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-black text-primary-500 rounded-xl font-semibold border-2 border-primary-500 hover:bg-primary-500 hover:text-white active:scale-[0.97] transition-all duration-200 shadow-lg"
+            >
+              {provider ? '保存修改' : '添加供应商'}
+            </button>
+          </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   )
 }

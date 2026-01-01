@@ -1,29 +1,20 @@
 /**
  * 蕾姆精心设计的输入区域组件
- * 包含彗星光标效果的独立组件
+ * 🎯 简化版自定义光标 - 只保留核心功能，确保流畅
  */
-import { useRef, RefObject, useEffect } from "react";
-import { Plus, Paperclip, Image, Mic, Sticker, X } from "lucide-react";
+import React, { useRef, RefObject, useEffect, useCallback, useState, useLayoutEffect } from "react";
+import { Plus, Paperclip, Image, Mic, Sticker, X, Square } from "lucide-react";
 import { useUIStore } from "../stores/uiStore";
+import { ModelSelector } from "./ModelSelector";
 
 interface InputAreaProps {
   input: string;
   setInput: (value: string) => void;
   onSend: () => void;
-  isFocused: boolean;
-  setIsFocused: (focused: boolean) => void;
-  caretVisible: boolean;
-  isTyping: boolean;
-  caretHeight: number;
-  caretPosition: { x: number; y: number };
-  moveDirection: number;
-  tailActive: boolean;
-  targetPosition: { x: number; y: number };
-  textareaRef: RefObject<HTMLTextAreaElement>;
-  mirrorRef: RefObject<HTMLDivElement>;
-  handleInputFocus: () => void;
-  handleInputBlur: () => void;
-  updateCaret: (isInputEvent?: boolean, enableTail?: boolean) => void;
+  currentModel?: string;
+  onModelChange?: (model: string) => void;
+  isSending?: boolean;
+  onStop?: () => void;
 }
 
 const toolItems = [
@@ -33,25 +24,162 @@ const toolItems = [
   { icon: Sticker, label: "表情符号", shortcut: "⌘⇧E" },
 ];
 
+// 需要同步的 CSS 属性
+const STYLES_TO_COPY = [
+  'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth', 'borderTopWidth',
+  'boxSizing', 'fontFamily', 'fontSize', 'fontStyle', 'fontVariant', 'fontWeight',
+  'letterSpacing', 'lineHeight', 'paddingBottom', 'paddingLeft', 'paddingRight', 'paddingTop',
+  'tabSize', 'textIndent', 'textRendering', 'textTransform', 'width', 'wordBreak', 'wordSpacing', 'wordWrap'
+];
+
+/**
+ * 简化的光标组件 - 只做必要的事情
+ */
+const Cursor = React.memo(({
+  textareaRef,
+  content
+}: {
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
+  content: string;
+}) => {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [isFocused, setIsFocused] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState('#95C0EC');
+
+  const cursorRef = useRef<HTMLDivElement>(null);
+  const mirrorRef = useRef<HTMLDivElement>(null);
+  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isTypingRef = useRef(false);
+
+  // 监听主题色变化
+  useEffect(() => {
+    const updateColor = () => {
+      const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+      if (color) setPrimaryColor(color);
+    };
+    updateColor();
+
+    const observer = new MutationObserver(updateColor);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme-color']
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  // 计算光标位置
+  const updatePos = useCallback(() => {
+    const textarea = textareaRef.current;
+    const mirror = mirrorRef.current;
+    if (!textarea || !mirror) return;
+
+    // 只同步一次样式
+    if (!mirror.style.width) {
+      const computed = getComputedStyle(textarea);
+      STYLES_TO_COPY.forEach(prop => {
+        (mirror.style as any)[prop] = computed[prop as any];
+      });
+    }
+    mirror.style.width = textarea.clientWidth + 'px';
+
+    // 计算位置
+    const textBefore = textarea.value.substring(0, textarea.selectionStart);
+    mirror.textContent = textBefore;
+
+    const span = document.createElement('span');
+    span.textContent = '|';
+    mirror.appendChild(span);
+
+    const x = span.offsetLeft - textarea.scrollLeft;
+    const y = span.offsetTop - textarea.scrollTop;
+
+    mirror.removeChild(span);
+
+    setPos({ x, y });
+
+    // 输入状态检测
+    isTypingRef.current = true;
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+    }, 500);
+  }, [textareaRef]);
+
+  // 内容变化时立即更新（同步）
+  useLayoutEffect(() => {
+    if (isFocused) {
+      updatePos();
+    }
+  }, [content, isFocused, updatePos]);
+
+  // 事件监听
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const handleFocus = () => setIsFocused(true);
+    const handleBlur = () => setIsFocused(false);
+
+    textarea.addEventListener('focus', handleFocus);
+    textarea.addEventListener('blur', handleBlur);
+
+    const events = ['click', 'select', 'scroll'];
+    events.forEach(e => {
+      textarea.addEventListener(e, updatePos, { passive: true });
+    });
+
+    return () => {
+      textarea.removeEventListener('focus', handleFocus);
+      textarea.removeEventListener('blur', handleBlur);
+      events.forEach(e => textarea.removeEventListener(e, updatePos));
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, [textareaRef, updatePos]);
+
+  const transform = `translate(${pos.x}px, ${pos.y}px)`;
+
+  return (
+    <>
+      <div
+        ref={mirrorRef}
+        style={{
+          position: 'absolute', top: 0, left: 0,
+          visibility: 'hidden', pointerEvents: 'none',
+          whiteSpace: 'pre-wrap', wordWrap: 'break-word',
+        }}
+      />
+      {isFocused && (
+        <div
+          ref={cursorRef}
+          className={isTypingRef.current ? 'caret-breathing' : 'blinking'}
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: '2px', height: '20px',
+            backgroundColor: primaryColor,
+            transform,
+            transition: 'transform 0.05s ease-out',
+            boxShadow: isTypingRef.current
+              ? `0 0 6px ${primaryColor}80, 0 0 12px ${primaryColor}40`
+              : 'none',
+          }}
+        />
+      )}
+    </>
+  );
+});
+Cursor.displayName = 'Cursor';
+
 export default function InputArea({
   input,
   setInput,
   onSend,
-  isFocused,
-  caretVisible,
-  isTyping,
-  caretHeight,
-  caretPosition,
-  moveDirection,
-  tailActive,
-  targetPosition,
-  textareaRef,
-  mirrorRef,
-  handleInputFocus,
-  handleInputBlur,
-  updateCaret,
+  currentModel,
+  onModelChange,
+  isSending = false,
+  onStop,
 }: InputAreaProps) {
-  const { showTools, setShowTools, setMobileSidebarOpen } = useUIStore();
+  const { showTools, setShowTools } = useUIStore();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 点击遮罩关闭工具面板
   useEffect(() => {
@@ -69,147 +197,118 @@ export default function InputArea({
     }
   }, [showTools, setShowTools]);
 
+  // 自动调整 textarea 高度
+  const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    const newValue = textarea.value;
+    setInput(newValue);
+    textarea.style.height = "auto";
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 144);
+    textarea.style.height = newHeight + "px";
+  }, [setInput]);
+
+  // 键盘事件处理
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSend();
+    }
+  }, [onSend]);
+
   return (
     <>
-      {/* 输入区域 - 桌面应用优化 */}
-      <div className="input-gradient relative px-2.5 sm:px-4 pb-3 sm:pb-6">
+      {/* 输入区域 */}
+      <div className="relative px-2.5 sm:px-4 pb-3 sm:pb-6">
         <div className="max-w-3xl mx-auto relative z-10">
-          {/* 悬浮输入框 - 桌面应用优化 */}
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl shadow-xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
-            {/* 工具栏 - 桌面应用优化 */}
+          {/* 悬浮输入框 */}
+          <div className="bg-white dark:bg-dark-card rounded-xl sm:rounded-2xl shadow-xl shadow-black/5 dark:shadow-black/20 overflow-hidden">
+            {/* 工具栏 */}
             <div className="flex items-center gap-1 px-2.5 py-2 sm:px-4 sm:py-2.5">
               <button
                 onClick={() => setShowTools(!showTools)}
                 className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
               >
-                <Plus className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+                <Plus className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
               </button>
+
               <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
-                <Paperclip className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+                <Paperclip className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
               </button>
+
               <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
-                <Image className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+                <Image className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
               </button>
+
+              {/* 模型选择器 */}
+              {onModelChange && (
+                <ModelSelector
+                  currentModel={currentModel || ''}
+                  onModelChange={onModelChange}
+                />
+              )}
+
               <div className="flex-1" />
+
               <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
-                <Mic className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+                <Mic className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
               </button>
             </div>
 
-            {/* 文本输入区 - 桌面应用优化 */}
+            {/* 文本输入区 */}
             <div className="relative flex items-start gap-2 px-2.5 pb-2.5 sm:px-4 sm:pb-3">
-              <div className="flex-1 relative">
-                {/* 镜像层 */}
-                <div
-                  ref={mirrorRef}
-                  id="caret-mirror"
-                  style={{
-                    position: "absolute",
-                    visibility: "hidden",
-                    zIndex: -1,
-                    overflow: "hidden",
-                    top: 0,
-                    left: 0,
-                    pointerEvents: "none",
-                    whiteSpace: "pre-wrap",
-                    wordWrap: "break-word",
-                  }}
-                />
+              <div className="relative flex-1">
                 <textarea
                   ref={textareaRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onFocus={handleInputFocus}
-                  onBlur={handleInputBlur}
-                  onClick={updateCaret}
-                  onKeyUp={updateCaret}
-                  onSelect={updateCaret}
-                  onScroll={updateCaret}
-                  onKeyDown={(e) => {
-                    updateCaret();
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      onSend();
-                    }
-                  }}
+                  onChange={handleInput}
+                  onKeyDown={handleKeyDown}
                   placeholder="输入消息..."
-                  className="custom-caret-textarea w-full bg-transparent resize-none outline-none text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] dark:placeholder-[#636366] min-h-[24px] max-h-36 leading-relaxed py-1.5 overflow-y-auto block"
-                  style={{ height: "auto" }}
+                  className="w-full bg-transparent resize-none outline-none text-[14px] text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary min-h-[24px] max-h-36 leading-relaxed py-1.5 overflow-y-auto"
+                  style={{ caretColor: 'transparent' }}
+                  rows={1}
                 />
-
-                {/* 自定义彗星光标 */}
-                {caretVisible && (
-                  <div
-                    className={`comet-caret absolute pointer-events-none ${
-                      isTyping ? "typing" : ""
-                    }`}
-                    data-direction={moveDirection > 0 ? "1" : "-1"}
-                    style={{
-                      transform: `translate(${targetPosition.x}px, ${targetPosition.y}px)`,
-                    }}
-                  >
-                    <div
-                      className={`comet-tail ${tailActive ? "active" : ""}`}
-                    />
-                    {tailActive &&
-                      [...Array(4)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="comet-particle"
-                          style={
-                            {
-                              "--particle-offset": `${(i + 1) * 10 + 8}px`,
-                              width: `${6 - i}px`,
-                              height: `${6 - i}px`,
-                              opacity: 0.6 - i * 0.12,
-                              animation: `particle-fade 0.4s ease-out ${
-                                i * 0.03
-                              }s both`,
-                            } as React.CSSProperties
-                          }
-                        />
-                      ))}
-                    <div
-                      className="comet-caret-main"
-                      style={{ height: `${caretHeight}px` }}
-                    >
-                      <div className="comet-caret-glow" />
-                    </div>
-                  </div>
-                )}
+                <Cursor textareaRef={textareaRef} content={input} />
               </div>
+
+              {/* 发送/停止按钮 */}
               <button
-                onClick={onSend}
-                disabled={!input.trim()}
-                className={`p-2 rounded-xl transition-all duration-200 active:scale-95 self-end shrink-0 ${
-                  input.trim()
+                onClick={isSending ? onStop : onSend}
+                disabled={!input.trim() && !isSending}
+                className={`p-2 rounded-xl transition-all duration-200 active:scale-95 self-end shrink-0 flex items-center justify-center ${
+                  isSending
+                    ? "bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/25"
+                    : input.trim()
                     ? "bg-primary-500 text-white hover:bg-primary-600 dark:hover:bg-primary-400 shadow-lg shadow-primary-500/25"
-                    : "bg-[#e5e5ea] dark:bg-[#3a3a3c] text-[#86868b] dark:text-[#636366] cursor-not-allowed"
+                    : "bg-light-border dark:bg-dark-border text-light-text-secondary dark:text-dark-text-secondary cursor-not-allowed"
                 }`}
               >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19V5m0 0l-7 7m7-7l7 7"
-                  />
-                </svg>
+                {isSending ? (
+                  <Square className="w-3.5 h-3.5" fill="currentColor" />
+                ) : (
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19V5m0 0l-7 7m7-7l7 7"
+                    />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
 
-          {/* 提示文本 - 桌面应用优化 */}
+          {/* 提示文本 */}
           <div className="hidden sm:flex items-center justify-center gap-2 mt-1.5">
-            <p className="text-[11px] text-[#86868b] dark:text-[#636366]">
+            <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
               AI 可能产生错误，请核实重要信息
             </p>
-            <span className="text-[#d1d1d6] dark:text-[#4a4a4c]">·</span>
+            <span className="text-light-border dark:text-dark-border">·</span>
             <button className="text-[11px] text-primary-500 hover:underline">
               查看快捷键
             </button>
@@ -217,14 +316,14 @@ export default function InputArea({
         </div>
       </div>
 
-      {/* 展开工具面板 - 桌面应用优化 */}
+      {/* 展开工具面板 */}
       {showTools && (
-        <div className="tools-panel fixed bottom-16 sm:bottom-28 left-2 right-2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/30 p-2 sm:p-3 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="tools-panel fixed bottom-16 sm:bottom-28 left-2 right-2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto bg-white/95 dark:bg-dark-card/95 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/30 p-2 sm:p-3 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <button
             onClick={() => setShowTools(false)}
             className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
           >
-            <X className="w-3.5 h-3.5 text-[#86868b] dark:text-[#8e8e93]" />
+            <X className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
           </button>
           <div className="grid grid-cols-4 gap-1">
             {toolItems.map((item) => (
@@ -233,7 +332,7 @@ export default function InputArea({
                 className="flex flex-col items-center gap-1 px-2 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-200"
               >
                 <item.icon className="w-4 h-4 text-primary-500" />
-                <span className="text-[10px] text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <span className="text-[10px] text-light-text-primary dark:text-dark-text-primary">
                   {item.label}
                 </span>
               </button>

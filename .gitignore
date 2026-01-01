@@ -9,6 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-electron  # 🎯 蕾姆：Electron 主进程构建产物
+release
 dist-ssr
 *.local
 

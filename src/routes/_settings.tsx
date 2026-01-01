@@ -15,7 +15,7 @@ function SettingsLayout() {
 
   return (
     <>
-      <div className="h-screen w-screen overflow-hidden bg-[#f5f5f7] dark:bg-black">
+      <div className="h-screen w-screen overflow-hidden bg-light-page dark:bg-dark-page">
         <div className="h-full flex">
           {/* 🎯 使用统一的 MainSidebar 组件，inSettingsContext={true} */}
           <MainSidebar
