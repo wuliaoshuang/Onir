@@ -4,7 +4,7 @@
  * 🎯 悬浮按钮：竖向排列的圆形图标按钮
  * 🎯 使用 Framer Motion 添加平滑动画
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 import { AnimatePresence, motion } from "framer-motion";
@@ -17,6 +17,7 @@ import { FloatingPanelButtons } from "../components/FloatingPanelButtons";
 import { useChatStore, selectActiveMessages } from "../stores/chatStore";
 import { useUIStore } from "../stores/uiStore";
 import { useApiKeyStore } from "../stores/apiKeyStore";
+import { useToastStore } from "../stores/toastStore";
 import { useDeepSeekChat } from "../hooks/useDeepSeekChat";
 import InputArea from "../components/InputArea";
 
@@ -28,15 +29,68 @@ function ChatPage() {
   const {
     createConversation,
     setActiveConversation,
-    getConversationModel,
     setConversationModel,
     // 🎯 蕾姆：右侧面板状态管理
     setConversationPanelVisible,
     setConversationPanelTab,
     openConversationPanelWithTab,
   } = useChatStore();
+
+  // 🎯 蕾姆：获取会话保存的模型（使用选择器订阅）
+  const savedModel = useChatStore((state) => {
+    if (!activeConversationId) return undefined;
+    return state.conversations.find(c => c.id === activeConversationId)?.selectedModel;
+  });
+
   const { copiedMessageId, copyToClipboard } = useUIStore();
-  const { getDefaultModel } = useApiKeyStore();
+
+  // 🎯 蕾姆：响应式检查是否有可用模型（订阅原始状态）
+  const providers = useApiKeyStore((state) => state.providers);
+  const enabledModels = useApiKeyStore((state) => state.enabledModels);
+  const keys = useApiKeyStore((state) => state.keys);
+
+  // 🎯 蕾姆：使用 useMemo 缓存计算结果（只计算有密钥的供应商）
+  const { hasModel, defaultModel, availableModels } = useMemo(() => {
+    const getProviderEnabledModels = useApiKeyStore.getState().getProviderEnabledModels;
+
+    // 🎯 蕾姆修复：只计算有密钥配置的供应商的模型
+    const providersWithKeys = providers.filter(p =>
+      keys.some(k => k.providerId === p.id)
+    );
+
+    const allModels = providersWithKeys.flatMap((p) =>
+      getProviderEnabledModels(p.id)
+    );
+
+    return {
+      hasModel: allModels.length > 0,
+      defaultModel: allModels.length > 0 ? allModels[0] : undefined,
+      availableModels: new Set(allModels),  // 🎯 使用 Set 优化查找性能
+    };
+  }, [providers, enabledModels, keys]);
+
+  // 🎯 蕾姆：计算当前模型（如果保存的模型不可用则回退）
+  const currentModel = useMemo(() => {
+    // 如果保存的模型在可用模型集合中，使用它
+    if (savedModel && availableModels.has(savedModel)) {
+      return savedModel;
+    }
+    // 否则回退到 defaultModel
+    return defaultModel || "";
+  }, [savedModel, defaultModel, availableModels]);
+
+  // 🎯 蕾姆：自动修复机制 - 检测到模型不可用时自动更新会话
+  useEffect(() => {
+    if (activeConversationId && savedModel && defaultModel) {
+      if (!availableModels.has(savedModel)) {
+        console.log(`🔄 蕾姆：检测到模型 "${savedModel}" 不可用，自动切换到 "${defaultModel}"`);
+        setConversationModel(activeConversationId, defaultModel);
+      }
+    }
+  }, [activeConversationId, savedModel, defaultModel, availableModels, setConversationModel]);
+
+  // 🎯 蕾姆：Toast 提示
+  const { warning } = useToastStore();
 
   // 🎯 蕾姆：判断是否有活动会话
   const hasConversation = !!activeConversationId;
@@ -46,11 +100,6 @@ function ChatPage() {
     const newId = createConversation();
     setActiveConversation(newId);
   };
-
-  // 🎯 蕾姆：模型管理
-  const currentModel = activeConversationId
-    ? getConversationModel(activeConversationId) || getDefaultModel() || ""
-    : getDefaultModel() || "";
 
   const handleModelChange = (model: string) => {
     if (activeConversationId) {
@@ -124,6 +173,13 @@ function ChatPage() {
   const handleSend = async () => {
     if (!input.trim() || isGenerating) return;
 
+    // 🎯 蕾姆：检查是否已配置模型
+    if (!hasModel) {
+      warning("请先在设置中配置 AI 模型和 API Key");
+      // 保持输入框内容
+      return;
+    }
+
     const userInput = input;
     setInput("");
 
@@ -131,6 +187,7 @@ function ChatPage() {
       await sendMessage(userInput);
     } catch (error) {
       console.error("发送消息失败:", error);
+      // 🎯 蕾姆：错误时回填用户输入
       setInput(userInput);
     }
   };
@@ -202,6 +259,7 @@ function ChatPage() {
               onSend={handleSend}
               currentModel={currentModel}
               onModelChange={handleModelChange}
+              hasModel={hasModel}
               isSending={isGenerating}
               onStop={handleAbort}
             />

@@ -46,6 +46,7 @@ export function useDeepSeekChat({ conversationId }: UseDeepSeekChatOptions): Use
     setStreamingState,
     getStreamingState,
     updateStreamingContent,
+    updateStreamingReasoning,  // 🎯 蕾姆：更新思考链内容
     abortConversationGeneration,
     getConversationModel,  // 🎯 蕾姆：获取对话的模型
     renameConversation,    // 🎯 蕾姆：重命名对话（用于标题生成）
@@ -190,16 +191,136 @@ export function useDeepSeekChat({ conversationId }: UseDeepSeekChatOptions): Use
           baseUrl: credentials.baseUrl,
           providerId: credentials.providerId,
         })
+
+        // 🎯 蕾姆：打字机效果状态
         let accumulatedContent = ''
+        let displayedContent = ''  // 实际显示的内容（逐字增加）
+        let accumulatedReasoning = ''
+        let displayedReasoning = ''  // 🎯 蕾姆：思考内容显示
+        let typewriterTimer: ReturnType<typeof setTimeout> | null = null
+        let reasoningTimer: ReturnType<typeof setTimeout> | null = null  // 🎯 蕾姆：思考打字机定时器
+
+        // 🎯 蕾姆：平滑打字机效果函数（正文）
+        const enqueueTypewriter = (newContent: string) => {
+          // 清除之前的定时器
+          if (typewriterTimer) {
+            clearTimeout(typewriterTimer)
+          }
+
+          const targetLength = newContent.length
+          let currentIndex = displayedContent.length
+
+          // 如果新内容比显示内容短（不应该发生，但防御性编程）
+          if (targetLength < currentIndex) {
+            displayedContent = newContent
+            updateStreamingContent(conversationId, assistantMessageId, displayedContent)
+            return
+          }
+
+          // 🎯 蕾姆：每次增加至少一个字符，速度根据剩余内容动态调整
+          const typeNextChar = () => {
+            if (currentIndex < targetLength) {
+              // 计算本次要输出的字符数：剩余越多，输出越快
+              const remaining = targetLength - currentIndex
+              let charsToAdd = 1
+
+              if (remaining > 100) {
+                charsToAdd = Math.min(15, Math.floor(remaining / 10))
+              } else if (remaining > 50) {
+                charsToAdd = Math.min(8, Math.floor(remaining / 8))
+              } else if (remaining > 20) {
+                charsToAdd = Math.min(4, Math.floor(remaining / 5))
+              }
+
+              currentIndex = Math.min(currentIndex + charsToAdd, targetLength)
+              displayedContent = newContent.slice(0, currentIndex)
+              updateStreamingContent(conversationId, assistantMessageId, displayedContent)
+
+              // 继续下一个字符，延迟动态调整
+              const delay = remaining > 50 ? 10 : remaining > 20 ? 20 : 30
+              typewriterTimer = setTimeout(typeNextChar, delay)
+            }
+          }
+
+          typeNextChar()
+        }
+
+        // 🎯 蕾姆：思考内容打字机效果函数
+        const enqueueReasoningTypewriter = (newContent: string) => {
+          // 清除之前的定时器
+          if (reasoningTimer) {
+            clearTimeout(reasoningTimer)
+          }
+
+          const targetLength = newContent.length
+          let currentIndex = displayedReasoning.length
+
+          if (targetLength < currentIndex) {
+            displayedReasoning = newContent
+            updateStreamingReasoning(conversationId, assistantMessageId, displayedReasoning)
+            return
+          }
+
+          // 🎯 蕾姆：思考内容打字机效果 - 稍微快一点
+          const typeNextChar = () => {
+            if (currentIndex < targetLength) {
+              const remaining = targetLength - currentIndex
+              let charsToAdd = 1
+
+              // 思考内容输出速度稍快
+              if (remaining > 200) {
+                charsToAdd = Math.min(20, Math.floor(remaining / 8))
+              } else if (remaining > 100) {
+                charsToAdd = Math.min(12, Math.floor(remaining / 10))
+              } else if (remaining > 50) {
+                charsToAdd = Math.min(6, Math.floor(remaining / 6))
+              }
+
+              currentIndex = Math.min(currentIndex + charsToAdd, targetLength)
+              displayedReasoning = newContent.slice(0, currentIndex)
+              updateStreamingReasoning(conversationId, assistantMessageId, displayedReasoning)
+
+              // 思考内容延迟更短
+              const delay = remaining > 50 ? 5 : remaining > 20 ? 10 : 15
+              reasoningTimer = setTimeout(typeNextChar, delay)
+            }
+          }
+
+          typeNextChar()
+        }
 
         await client.chat(
           messageHistory,
           {
             onChunk: (chunk) => {
               accumulatedContent += chunk
-              updateStreamingContent(conversationId, assistantMessageId, accumulatedContent)
+              // 使用打字机效果输出
+              enqueueTypewriter(accumulatedContent)
+            },
+            // 🎯 蕾姆：处理思考链内容（推理模型的思考过程）
+            onReasoningChunk: (chunk) => {
+              accumulatedReasoning += chunk
+              // 🎯 蕾姆：思考内容也使用打字机效果
+              enqueueReasoningTypewriter(accumulatedReasoning)
             },
             onComplete: () => {
+              // 🎯 蕾姆：完成时立即显示所有剩余内容
+              if (typewriterTimer) {
+                clearTimeout(typewriterTimer)
+              }
+              if (reasoningTimer) {
+                clearTimeout(reasoningTimer)
+              }
+              if (accumulatedContent !== displayedContent) {
+                displayedContent = accumulatedContent
+                updateStreamingContent(conversationId, assistantMessageId, displayedContent)
+              }
+              // 🎯 蕾姆：完成时显示所有剩余思考内容
+              if (accumulatedReasoning !== displayedReasoning) {
+                displayedReasoning = accumulatedReasoning
+                updateStreamingReasoning(conversationId, assistantMessageId, displayedReasoning)
+              }
+
               setStreamingState(conversationId, {
                 status: 'completed',
                 messageId: assistantMessageId,
@@ -251,7 +372,7 @@ export function useDeepSeekChat({ conversationId }: UseDeepSeekChatOptions): Use
         setIsGenerating(false)
       }
     },
-    [conversationId, getModelCredentials, addMessage, getConversation, getConversationModel, setStreamingState, getStreamingState, updateStreamingContent, abortConversationGeneration, renameConversation, setTitleGenerating, setTitleGenerated, systemPrompt]
+    [conversationId, getModelCredentials, addMessage, getConversation, getConversationModel, setStreamingState, getStreamingState, updateStreamingContent, updateStreamingReasoning, abortConversationGeneration, renameConversation, setTitleGenerating, setTitleGenerated, systemPrompt]
   )
 
   /**

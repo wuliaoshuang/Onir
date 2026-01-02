@@ -44,20 +44,32 @@ interface GoogleContent {
   parts: Array<{ text?: string; inline_data?: { mime_type: string; data: string } }>
 }
 
+// 🎯 蕾姆：思考链配置
+interface ThinkingConfig {
+  includeThoughts?: boolean  // 是否返回思考摘要
+  thinkingBudget?: number     // -1 = 动态, 0 = 禁用, >0 = 固定预算
+}
+
 interface GoogleGenerateContentRequest {
   contents: GoogleContent[]
   generationConfig?: {
     temperature?: number
     maxOutputTokens?: number
+    thinkingConfig?: ThinkingConfig  // 🎯 蕾姆：思考链配置
   }
 }
 
 // ========================================
 // Google AI API 响应格式
 // ========================================
+interface GooglePart {
+  text?: string
+  thought?: boolean  // 🎯 蕾姆：是否为思考内容
+}
+
 interface GoogleCandidate {
   content?: {
-    parts: Array<{ text?: string }>
+    parts: Array<GooglePart>
     role: string
   }
   finishReason?: string
@@ -91,12 +103,31 @@ export class GoogleAIClient {
 
   /**
    * 构建 API endpoint URL
-   * 格式: /v1beta/models/{model}:streamGenerateContent
+   * 格式: /v1beta/models/{model}:streamGenerateContent?alt=sse
+   *
+   * 🎯 蕾姆关键修复：添加 alt=sse 参数启用真正的 SSE 流式！
    */
   private buildEndpoint(model: string): string {
     // 移除尾部斜杠
     const baseUrl = this.baseUrl.replace(/\/$/, '')
-    return `${baseUrl}/v1beta/models/${model}:streamGenerateContent`
+    return `${baseUrl}/v1beta/models/${model}:streamGenerateContent?alt=sse`
+  }
+
+  /**
+   * 🎯 蕾姆：判断模型是否支持思考链
+   * Gemini 2.5 Pro/Flash 系列支持 thinking
+   */
+  private isThinkingModel(model: string): boolean {
+    const lowerModel = model.toLowerCase()
+    return (
+      lowerModel.includes('gemini-2.5-pro') ||
+      lowerModel.includes('gemini-2.5-flash') ||
+      lowerModel.includes('gemini-2.5-flash-lite') ||
+      lowerModel.includes('gemini-3-pro') ||
+      lowerModel.includes('gemini-3-flash') ||
+      // 通用匹配：thinking 系列模型
+      lowerModel.includes('thinking')
+    )
   }
 
   /**
@@ -106,6 +137,7 @@ export class GoogleAIClient {
   private buildHeaders(): HeadersInit {
     return {
       'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',  // 🎯 蕾姆：明确要求 SSE 流式响应
       'x-goog-api-key': this.apiKey,
     }
   }
@@ -169,6 +201,11 @@ export class GoogleAIClient {
         generationConfig: {
           temperature: options?.temperature ?? 0.7,
           maxOutputTokens: options?.maxTokens ?? 4096,
+          // 🎯 蕾姆：为 Pro/Thinking 模型启用思考链
+          thinkingConfig: this.isThinkingModel(model) ? {
+            includeThoughts: true,   // 返回思考摘要
+            thinkingBudget: -1,       // 动态思考预算（模型自己决定）
+          } : undefined,
         },
       }
 
@@ -193,16 +230,10 @@ export class GoogleAIClient {
   /**
    * 处理 SSE 流式响应
    *
-   * Google AI 的流式响应特点:
-   * - 返回一个完整的 JSON 数组: [{...}, {...}, ...]
-   * - 数组可能被网络分块传输，需要累积到完整才能解析
-   * - 文本内容在 candidates[0].content.parts[0].text
-   * - finishReason: "STOP" 表示完成
+   * 🎯 蕾姆修复 v4：支持 Gemini 思考链（thought 字段）
    *
-   * 处理策略:
-   * 1. 累积所有接收到的数据
-   * 2. 尝试解析为完整的 JSON 数组
-   * 3. 解析成功后，使用打字机效果逐个处理元素
+   * SSE 格式:
+   * data: {"candidates": [{"content": {"parts": [{"text": "...", "thought": true}]}}]}
    */
   private async processStream(
     response: Response,
@@ -215,142 +246,72 @@ export class GoogleAIClient {
 
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
-    let chunkCount = 0
 
     try {
       while (true) {
         const { done, value } = await reader.read()
-        if (done) {
-          console.log(`🔍 蕾姆调试：流结束，共接收 ${chunkCount} 个 chunk`)
-          break
-        }
+        if (done) break
 
-        chunkCount++
-        const chunkText = decoder.decode(value, { stream: true })
-        buffer += chunkText
+        buffer += decoder.decode(value, { stream: true })
 
-        console.log(`🔍 蕾姆调试：chunk #${chunkCount}，新增 ${chunkText.length} 字符，buffer 总计 ${buffer.length} 字符`)
+        // 按行处理 SSE 格式
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''  // 保留最后不完整的行
 
-        // 尝试解析 buffer 为 JSON
-        try {
-          const parsed = JSON.parse(buffer)
+        for (const line of lines) {
+          const trimmed = line.trim()
 
-          if (Array.isArray(parsed)) {
-            console.log(`✅ 蕾姆调试：成功解析 JSON 数组，${parsed.length} 个元素，准备用打字机效果输出`)
-            // 使用打字机效果处理数组中的每个元素
-            await this.processArrayWithTypewriterEffect(parsed, callbacks)
-            buffer = ''
-          } else if (parsed && typeof parsed === 'object') {
-            console.log('✅ 蕾姆调试：成功解析 JSON 对象')
-            if (this.processResponseItem(parsed, callbacks)) {
-              return
+          // 跳过空行
+          if (!trimmed) continue
+
+          // 移除 SSE 的 "data: " 前缀（如果有）
+          const dataStr = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed
+
+          try {
+            const parsed = JSON.parse(dataStr)
+
+            // 处理单个响应对象或数组
+            const items = Array.isArray(parsed) ? parsed : [parsed]
+
+            for (const item of items) {
+              const candidate = item.candidates?.[0]
+              if (!candidate?.content?.parts) continue
+
+              // 🎯 蕾姆关键：遍历所有 parts，检查 thought 字段
+              for (const part of candidate.content.parts) {
+                if (part.text) {
+                  if (part.thought === true) {
+                    // 这是思考链内容
+                    if (callbacks.onReasoningChunk) {
+                      callbacks.onReasoningChunk(part.text)
+                    }
+                  } else {
+                    // 这是正常回答内容
+                    callbacks.onChunk(part.text)
+                  }
+                }
+              }
+
+              // 检查是否完成
+              const finishReason = candidate.finishReason
+              if (finishReason && finishReason !== 'IN_PROGRESS') {
+                callbacks.onComplete()
+                return
+              }
             }
-            buffer = ''
+          } catch (parseError) {
+            console.debug('解析 SSE 行失败，跳过:', parseError, dataStr.slice(0, 100))
           }
-        } catch (parseError) {
-          // JSON 还不完整，继续累积数据
-          const errMsg = (parseError as Error).message
-          // 只在第一次和偶尔打印，避免日志过多
-          if (chunkCount === 1 || chunkCount % 10 === 0) {
-            console.log(`🔍 蕾姆调试：JSON 解析中... (chunk ${chunkCount}, buffer=${buffer.length} 字符)`)
-          }
-        }
-
-        // 防止 buffer 无限增长
-        if (buffer.length > 500000) {
-          console.warn('🔍 蕾姆警告：buffer 过大 (>500KB)，清空')
-          buffer = ''
         }
       }
 
-      // 流结束，尝试处理剩余数据
-      if (buffer.trim().length > 0) {
-        console.log(`🔍 蕾姆调试：流结束，尝试处理剩余 buffer (${buffer.length} 字符)`)
-        try {
-          const parsed = JSON.parse(buffer)
-          if (Array.isArray(parsed)) {
-            await this.processArrayWithTypewriterEffect(parsed, callbacks)
-          } else if (parsed && typeof parsed === 'object') {
-            this.processResponseItem(parsed, callbacks)
-          }
-        } catch (e) {
-          console.error('❌ 蕾姆调试：最终 buffer 解析失败', e)
-        }
-      }
-
-      console.log('🔍 蕾姆调试：流正常结束')
       callbacks.onComplete()
     } catch (error) {
-      console.error('❌ 蕾姆调试：processStream 错误 =', error)
+      console.error('Google AI 流处理错误:', error)
       callbacks.onError(error as Error)
     } finally {
       reader.releaseLock()
     }
-  }
-
-  /**
-   * 使用打字机效果处理数组元素
-   * 每个元素之间添加小延迟，模拟流式输出
-   * 🎯 蕾姆：增加延迟以获得更好的阅读体验
-   */
-  private async processArrayWithTypewriterEffect(
-    items: GenerateContentResponse[],
-    callbacks: StreamCallbacks
-  ): Promise<void> {
-    const TYPING_DELAY = 120  // 每个元素之间的延迟（毫秒）- 蕾姆调整为更舒适的阅读速度
-
-    console.log(`🔍 蕾姆调试：开始打字机效果，${items.length} 个元素，每个延迟 ${TYPING_DELAY}ms`)
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-
-      if (this.processResponseItem(item, callbacks)) {
-        console.log(`🔍 蕾姆调试：元素 [${i}] 触发完成信号，停止打字机效果`)
-        return
-      }
-
-      // 最后一个元素不需要延迟
-      if (i < items.length - 1) {
-        await this.delay(TYPING_DELAY)
-      }
-    }
-
-    console.log('✅ 蕾姆调试：打字机效果完成')
-  }
-
-  /**
-   * 延迟函数
-   */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
-  }
-
-  /**
-   * 处理单个响应项
-   * @returns true 表示收到完成信号，应该结束流
-   */
-  private processResponseItem(
-    data: GenerateContentResponse,
-    callbacks: StreamCallbacks
-  ): boolean {
-    // 提取文本内容
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-
-    if (text) {
-      console.log(`✅ 蕾姆调试：收到文本块，长度=${text.length}, 内容="${text.slice(0, 30)}..."`)
-      callbacks.onChunk(text)
-      return false  // 继续处理下一个元素
-    }
-
-    // 检查是否完成
-    const finishReason = data.candidates?.[0]?.finishReason
-    if (finishReason && finishReason !== 'IN_PROGRESS') {
-      console.log(`✅ 蕾姆调试：Google AI 完成原因 = ${finishReason}`)
-      callbacks.onComplete()
-      return true  // 应该结束流
-    }
-
-    return false
   }
 
   /**

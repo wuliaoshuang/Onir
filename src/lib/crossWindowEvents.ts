@@ -160,11 +160,13 @@ export function listenCrossWindowEvent<T = any>(
  * 为 Store 启用跨窗口自动同步
  * @param store Zustand Store 实例
  * @param eventType 事件类型
+ * @param reloadMethods 重载方法名列表（按优先级尝试调用）
  * @returns 取消同步函数
  */
 export async function enableCrossWindowSync<T extends object>(
   store: any,
-  eventType: CrossWindowEventType
+  eventType: CrossWindowEventType,
+  reloadMethods?: string[]
 ): Promise<UnlistenFunction> {
   console.log(`🔄 蕾姆：启用跨窗口 Store 同步 [${eventType}]`)
 
@@ -172,12 +174,25 @@ export async function enableCrossWindowSync<T extends object>(
   const unlisten = await listenCrossWindowEvent(eventType, async (payload) => {
     console.log(`📥 蕾姆：收到 Store 更新事件 [${eventType}]`, payload)
 
-    // 重新初始化 Store（从 localStorage 读取最新数据）
-    if (typeof store.getState().initTheme === 'function') {
-      store.getState().initTheme()
+    const state = store.getState()
+
+    // 🎯 蕾姆：优先使用指定的重载方法
+    if (reloadMethods && reloadMethods.length > 0) {
+      for (const methodName of reloadMethods) {
+        if (typeof state[methodName] === 'function') {
+          console.log(`🔄 蕾姆：调用重载方法 [${methodName}]`)
+          await state[methodName]()
+          return  // 成功调用一个方法后返回
+        }
+      }
     }
-    if (typeof store.getState().reloadFromStorage === 'function') {
-      store.getState().reloadFromStorage()
+
+    // 🎯 蕾姆：回退到默认方法（兼容旧代码）
+    if (typeof state.initTheme === 'function') {
+      state.initTheme()
+    }
+    if (typeof state.reloadFromStorage === 'function') {
+      state.reloadFromStorage()
     }
   })
 

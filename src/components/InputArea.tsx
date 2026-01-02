@@ -2,7 +2,14 @@
  * 蕾姆精心设计的输入区域组件
  * 🎯 简化版自定义光标 - 只保留核心功能，确保流畅
  */
-import React, { useRef, RefObject, useEffect, useCallback, useState, useLayoutEffect } from "react";
+import React, {
+  useRef,
+  RefObject,
+  useEffect,
+  useCallback,
+  useState,
+  useLayoutEffect,
+} from "react";
 import { Plus, Paperclip, Image, Mic, Sticker, X, Square } from "lucide-react";
 import { useUIStore } from "../stores/uiStore";
 import { ModelSelector } from "./ModelSelector";
@@ -15,6 +22,8 @@ interface InputAreaProps {
   onModelChange?: (model: string) => void;
   isSending?: boolean;
   onStop?: () => void;
+  // 🎯 蕾姆：是否已配置模型
+  hasModel?: boolean;
 }
 
 const toolItems = [
@@ -26,148 +35,189 @@ const toolItems = [
 
 // 需要同步的 CSS 属性
 const STYLES_TO_COPY = [
-  'borderBottomWidth', 'borderLeftWidth', 'borderRightWidth', 'borderTopWidth',
-  'boxSizing', 'fontFamily', 'fontSize', 'fontStyle', 'fontVariant', 'fontWeight',
-  'letterSpacing', 'lineHeight', 'paddingBottom', 'paddingLeft', 'paddingRight', 'paddingTop',
-  'tabSize', 'textIndent', 'textRendering', 'textTransform', 'width', 'wordBreak', 'wordSpacing', 'wordWrap'
+  "borderBottomWidth",
+  "borderLeftWidth",
+  "borderRightWidth",
+  "borderTopWidth",
+  "boxSizing",
+  "fontFamily",
+  "fontSize",
+  "fontStyle",
+  "fontVariant",
+  "fontWeight",
+  "letterSpacing",
+  "lineHeight",
+  "paddingBottom",
+  "paddingLeft",
+  "paddingRight",
+  "paddingTop",
+  "tabSize",
+  "textIndent",
+  "textRendering",
+  "textTransform",
+  "width",
+  "wordBreak",
+  "wordSpacing",
+  "wordWrap",
 ];
 
 /**
  * 简化的光标组件 - 只做必要的事情
  */
-const Cursor = React.memo(({
-  textareaRef,
-  content
-}: {
-  textareaRef: RefObject<HTMLTextAreaElement | null>;
-  content: string;
-}) => {
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [isFocused, setIsFocused] = useState(false);
-  const [primaryColor, setPrimaryColor] = useState('#95C0EC');
+const Cursor = React.memo(
+  ({
+    textareaRef,
+    content,
+  }: {
+    textareaRef: RefObject<HTMLTextAreaElement | null>;
+    content: string;
+  }) => {
+    const [pos, setPos] = useState({ x: 0, y: 0 });
+    const [isFocused, setIsFocused] = useState(false);
+    const [primaryColor, setPrimaryColor] = useState("#95C0EC");
 
-  const cursorRef = useRef<HTMLDivElement>(null);
-  const mirrorRef = useRef<HTMLDivElement>(null);
-  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isTypingRef = useRef(false);
+    const cursorRef = useRef<HTMLDivElement>(null);
+    const mirrorRef = useRef<HTMLDivElement>(null);
+    const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isTypingRef = useRef(false);
 
-  // 监听主题色变化
-  useEffect(() => {
-    const updateColor = () => {
-      const color = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
-      if (color) setPrimaryColor(color);
-    };
-    updateColor();
+    // 监听主题色变化
+    useEffect(() => {
+      const updateColor = () => {
+        const color = getComputedStyle(document.documentElement)
+          .getPropertyValue("--primary")
+          .trim();
+        if (color) setPrimaryColor(color);
+      };
+      updateColor();
 
-    const observer = new MutationObserver(updateColor);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class', 'data-theme-color']
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  // 计算光标位置
-  const updatePos = useCallback(() => {
-    const textarea = textareaRef.current;
-    const mirror = mirrorRef.current;
-    if (!textarea || !mirror) return;
-
-    // 只同步一次样式
-    if (!mirror.style.width) {
-      const computed = getComputedStyle(textarea);
-      STYLES_TO_COPY.forEach(prop => {
-        (mirror.style as any)[prop] = computed[prop as any];
+      const observer = new MutationObserver(updateColor);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class", "data-theme-color"],
       });
-    }
-    mirror.style.width = textarea.clientWidth + 'px';
+      return () => observer.disconnect();
+    }, []);
 
-    // 计算位置
-    const textBefore = textarea.value.substring(0, textarea.selectionStart);
-    mirror.textContent = textBefore;
+    // 计算光标位置
+    const updatePos = useCallback(() => {
+      const textarea = textareaRef.current;
+      const mirror = mirrorRef.current;
+      if (!textarea || !mirror) return;
 
-    const span = document.createElement('span');
-    span.textContent = '|';
-    mirror.appendChild(span);
+      // 只同步一次样式
+      if (!mirror.style.width) {
+        const computed = getComputedStyle(textarea);
+        STYLES_TO_COPY.forEach((prop) => {
+          (mirror.style as any)[prop] = computed[prop as any];
+        });
+      }
+      mirror.style.width = textarea.clientWidth + "px";
 
-    const x = span.offsetLeft - textarea.scrollLeft;
-    const y = span.offsetTop - textarea.scrollTop;
+      // 计算位置
+      const textBefore = textarea.value.substring(0, textarea.selectionStart);
+      mirror.textContent = textBefore;
 
-    mirror.removeChild(span);
+      const span = document.createElement("span");
+      span.textContent = "|";
+      mirror.appendChild(span);
 
-    setPos({ x, y });
+      const x = span.offsetLeft - textarea.scrollLeft;
+      const y = span.offsetTop - textarea.scrollTop;
 
-    // 输入状态检测
-    isTypingRef.current = true;
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => {
-      isTypingRef.current = false;
-    }, 500);
-  }, [textareaRef]);
+      mirror.removeChild(span);
 
-  // 内容变化时立即更新（同步）
-  useLayoutEffect(() => {
-    if (isFocused) {
-      updatePos();
-    }
-  }, [content, isFocused, updatePos]);
+      setPos({ x, y });
 
-  // 事件监听
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const handleFocus = () => setIsFocused(true);
-    const handleBlur = () => setIsFocused(false);
-
-    textarea.addEventListener('focus', handleFocus);
-    textarea.addEventListener('blur', handleBlur);
-
-    const events = ['click', 'select', 'scroll'];
-    events.forEach(e => {
-      textarea.addEventListener(e, updatePos, { passive: true });
-    });
-
-    return () => {
-      textarea.removeEventListener('focus', handleFocus);
-      textarea.removeEventListener('blur', handleBlur);
-      events.forEach(e => textarea.removeEventListener(e, updatePos));
+      // 输入状态检测
+      isTypingRef.current = true;
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    };
-  }, [textareaRef, updatePos]);
+      typingTimerRef.current = setTimeout(() => {
+        isTypingRef.current = false;
+      }, 500);
+    }, [textareaRef]);
 
-  const transform = `translate(${pos.x}px, ${pos.y}px)`;
+    // 🎯 蕾姆：延迟更新光标位置，确保浏览器已完成原生光标更新
+    const updatePosDelayed = useCallback(() => {
+      requestAnimationFrame(() => {
+        updatePos();
+      });
+    }, [updatePos]);
 
-  return (
-    <>
-      <div
-        ref={mirrorRef}
-        style={{
-          position: 'absolute', top: 0, left: 0,
-          visibility: 'hidden', pointerEvents: 'none',
-          whiteSpace: 'pre-wrap', wordWrap: 'break-word',
-        }}
-      />
-      {isFocused && (
+    // 内容变化时立即更新（同步）
+    useLayoutEffect(() => {
+      if (isFocused) {
+        updatePos();
+      }
+    }, [content, isFocused, updatePos]);
+
+    // 事件监听
+    useEffect(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const handleFocus = () => setIsFocused(true);
+      const handleBlur = () => setIsFocused(false);
+
+      textarea.addEventListener("focus", handleFocus);
+      textarea.addEventListener("blur", handleBlur);
+
+      // 🎯 蕾姆：keydown 事件使用延迟更新，其他事件立即更新
+      textarea.addEventListener("keydown", updatePosDelayed, { passive: true });
+      const syncEvents = ["click", "select", "scroll"];
+      syncEvents.forEach((e) => {
+        textarea.addEventListener(e, updatePos, { passive: true });
+      });
+
+      return () => {
+        textarea.removeEventListener("focus", handleFocus);
+        textarea.removeEventListener("blur", handleBlur);
+        textarea.removeEventListener("keydown", updatePosDelayed);
+        syncEvents.forEach((e) => textarea.removeEventListener(e, updatePos));
+        if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      };
+    }, [textareaRef, updatePos, updatePosDelayed]);
+
+    const transform = `translate(${pos.x}px, ${pos.y}px)`;
+
+    return (
+      <>
         <div
-          ref={cursorRef}
-          className={isTypingRef.current ? 'caret-breathing' : 'blinking'}
+          ref={mirrorRef}
           style={{
-            position: 'absolute', top: 0, left: 0,
-            width: '2px', height: '20px',
-            backgroundColor: primaryColor,
-            transform,
-            transition: 'transform 0.05s ease-out',
-            boxShadow: isTypingRef.current
-              ? `0 0 6px ${primaryColor}80, 0 0 12px ${primaryColor}40`
-              : 'none',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            visibility: "hidden",
+            pointerEvents: "none",
+            whiteSpace: "pre-wrap",
+            wordWrap: "break-word",
           }}
         />
-      )}
-    </>
-  );
-});
-Cursor.displayName = 'Cursor';
+        {isFocused && (
+          <div
+            ref={cursorRef}
+            className={isTypingRef.current ? "caret-breathing" : "blinking"}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "2px",
+              height: "20px",
+              backgroundColor: primaryColor,
+              transform,
+              transition: "transform 0.05s ease-out",
+              boxShadow: isTypingRef.current
+                ? `0 0 6px ${primaryColor}80, 0 0 12px ${primaryColor}40`
+                : "none",
+            }}
+          />
+        )}
+      </>
+    );
+  }
+);
+Cursor.displayName = "Cursor";
 
 export default function InputArea({
   input,
@@ -177,6 +227,7 @@ export default function InputArea({
   onModelChange,
   isSending = false,
   onStop,
+  hasModel = true,
 }: InputAreaProps) {
   const { showTools, setShowTools } = useUIStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -198,22 +249,28 @@ export default function InputArea({
   }, [showTools, setShowTools]);
 
   // 自动调整 textarea 高度
-  const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const textarea = e.target;
-    const newValue = textarea.value;
-    setInput(newValue);
-    textarea.style.height = "auto";
-    const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 144);
-    textarea.style.height = newHeight + "px";
-  }, [setInput]);
+  const handleInput = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const textarea = e.target;
+      const newValue = textarea.value;
+      setInput(newValue);
+      textarea.style.height = "auto";
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, 24), 144);
+      textarea.style.height = newHeight + "px";
+    },
+    [setInput]
+  );
 
   // 键盘事件处理
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      onSend();
-    }
-  }, [onSend]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        onSend();
+      }
+    },
+    [onSend]
+  );
 
   return (
     <>
@@ -231,27 +288,35 @@ export default function InputArea({
                 <Plus className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
               </button>
 
-              <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
-                <Paperclip className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
-              </button>
+              {/* 🎯 蕾姆：只有在配置了模型时才显示工具按钮 */}
+              {hasModel && (
+                <>
+                  <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
+                    <Paperclip className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
+                  </button>
 
-              <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
-                <Image className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
-              </button>
+                  <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
+                    <Image className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
+                  </button>
+                </>
+              )}
 
               {/* 模型选择器 */}
               {onModelChange && (
                 <ModelSelector
-                  currentModel={currentModel || ''}
+                  currentModel={currentModel || ""}
                   onModelChange={onModelChange}
                 />
               )}
 
               <div className="flex-1" />
 
-              <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
-                <Mic className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
-              </button>
+              {/* 🎯 蕾姆：只有在配置了模型时才显示语音输入按钮 */}
+              {hasModel && (
+                <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-all duration-200">
+                  <Mic className="w-3.5 h-3.5 text-light-text-secondary dark:text-dark-text-secondary" />
+                </button>
+              )}
             </div>
 
             {/* 文本输入区 */}
@@ -264,7 +329,7 @@ export default function InputArea({
                   onKeyDown={handleKeyDown}
                   placeholder="输入消息..."
                   className="w-full bg-transparent resize-none outline-none text-[14px] text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary min-h-[24px] max-h-36 leading-relaxed py-1.5 overflow-y-auto"
-                  style={{ caretColor: 'transparent' }}
+                  style={{ caretColor: "transparent" }}
                   rows={1}
                 />
                 <Cursor textareaRef={textareaRef} content={input} />

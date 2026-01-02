@@ -55,6 +55,7 @@ export interface Provider {
   requiresEndpoint: boolean      // 是否需要额外配置 endpoint
   keyPrefix: string             // 密钥前缀（如 'sk-'）
   models: string[]              // 支持的模型列表
+  reasoningModels?: string[]    // 🎯 蕾姆：推理模型列表（支持思考链的模型）
   status: 'active' | 'inactive' // 供应商状态
   stats: {                      // 使用统计
     calls: number
@@ -81,4 +82,6 @@ export interface ApiKeysStorage {
   providers: Provider[]          // 供应商配置
   activeProviders: ProviderType[] // 已激活的供应商
   defaultProvider: ProviderType  // 默认供应商
+  // 🎯 蕾姆新增：每个供应商的启用/禁用模型列表
+  enabledModels?: Record<string, string[]>  // { providerId: [modelNames] }
 }

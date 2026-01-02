@@ -25,6 +25,7 @@ export interface Message {
   id: number
   role: MessageRole
   content: string
+  reasoning_content?: string  // 🎯 蕾姆：思考链内容（推理模型的思考过程）
   timestamp?: number
 }
 
@@ -124,6 +125,9 @@ interface ChatState {
 
   // 🎯 修改：更新流式内容时校验会话和消息 ID
   updateStreamingContent: (conversationId: string, messageId: number, content: string) => void
+
+  // 🎯 蕾姆：更新思考链内容（推理模型的思考过程）
+  updateStreamingReasoning: (conversationId: string, messageId: number, reasoningContent: string) => void
 
   // 取消指定会话的生成
   abortConversationGeneration: (conversationId: string) => void
@@ -334,6 +338,35 @@ export const useChatStore = create<ChatState>()(
                     ...c,
                     messages: c.messages.map((m) =>
                       m.id === messageId ? { ...m, content } : m
+                    ),
+                    updatedAt: Date.now(),
+                  }
+                : c
+            ),
+          }))
+        },
+
+        // 🎯 蕾姆：更新思考链内容（推理模型的思考过程）
+        updateStreamingReasoning: (conversationId, messageId, reasoningContent) => {
+          const streamingState = get().streamingStates.get(conversationId)
+
+          // 🎯 蕾姆：严格校验，只更新当前会话正在生成的消息
+          if (
+            !streamingState ||
+            streamingState.messageId !== messageId ||
+            streamingState.status !== 'generating'
+          ) {
+            console.warn('Invalid reasoning update', { conversationId, messageId, streamingState })
+            return
+          }
+
+          set((state) => ({
+            conversations: state.conversations.map((c) =>
+              c.id === conversationId
+                ? {
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === messageId ? { ...m, reasoning_content: reasoningContent } : m
                     ),
                     updatedAt: Date.now(),
                   }

@@ -19,7 +19,15 @@ import {
 } from "lucide-react";
 import { useUIStore } from "../stores/uiStore";
 import { useChatStore } from "../stores/chatStore";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "./ui/Dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "./ui/Dialog";
 import { Button } from "./ui/Button";
 
 // 蕾姆：声明 Electron API 类型
@@ -53,7 +61,10 @@ export default function Sidebar() {
 
   // 🎯 蕾姆：删除确认弹窗状态
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [conversationToDelete, setConversationToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [conversationToDelete, setConversationToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const handleNewConversation = () => {
     createConversation("新对话");
@@ -71,11 +82,15 @@ export default function Sidebar() {
 
   const handleSettings = () => {
     // 蕾姆：直接调用 Electron API 打开设置窗口
-    window.electronAPI?.openSettingsWindow()
+    window.electronAPI?.openSettingsWindow();
   };
 
   // 🎯 蕾姆：删除会话处理
-  const handleDeleteClick = (e: React.MouseEvent, id: string, title: string) => {
+  const handleDeleteClick = (
+    e: React.MouseEvent,
+    id: string,
+    title: string
+  ) => {
     e.stopPropagation(); // 防止触发选择会话
     setConversationToDelete({ id, title });
     setDeleteModalOpen(true);
@@ -150,7 +165,7 @@ export default function Sidebar() {
                 </svg>
               </div>
               <span className="font-semibold text-light-text-primary dark:text-dark-text-primary text-[14px] tracking-tight">
-                Assistant
+                REM
               </span>
             </div>
             <button
@@ -238,7 +253,7 @@ export default function Sidebar() {
             <div className="space-y-0.5">
               {conversations.length === 0 ? (
                 // 🎯 蕾姆：空状态提示
-                <p className="text-[12px] text-light-text-tertiary dark:text-dark-text-tertiary px-3 py-4 text-center">
+                <p className="text-[12px] text-light-text-tertiary dark:text-dark-text-tertiary px-3 text-center">
                   暂无聊天记录，请创建
                 </p>
               ) : (
@@ -296,7 +311,9 @@ export default function Sidebar() {
             <DialogTitle>确认删除会话</DialogTitle>
           </DialogHeader>
           <DialogDescription className="px-6 pt-2">
-            确定要删除会话 <strong>"{conversationToDelete?.title || ''}"</strong> 吗？删除后无法恢复，如果该会话正在进行 AI 对话，也会被中断。
+            确定要删除会话{" "}
+            <strong>"{conversationToDelete?.title || ""}"</strong>{" "}
+            吗？删除后无法恢复，如果该会话正在进行 AI 对话，也会被中断。
           </DialogDescription>
           <DialogFooter>
             <DialogClose asChild>

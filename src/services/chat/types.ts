@@ -19,6 +19,8 @@ export interface ChatCompletionRequest {
 // ========================================
 export interface StreamCallbacks {
   onChunk: (chunk: string) => void
+  // 🎯 蕾姆：思考链内容回调（推理模型的思考过程）
+  onReasoningChunk?: (chunk: string) => void
   onComplete: () => void
   onError: (error: Error) => void
 }

@@ -172,6 +172,7 @@ export class UniversalChatClient {
 
   /**
    * 处理 SSE 流式响应
+   * 🎯 蕾姆增强：支持 DeepSeek R1 等推理模型的 reasoning_content 字段
    */
   private async processStream(
     response: Response,
@@ -211,10 +212,18 @@ export class UniversalChatClient {
 
           try {
             const chunk = JSON.parse(data)
-            const content = chunk.choices[0]?.delta?.content
+            const delta = chunk.choices[0]?.delta
 
-            if (content) {
-              callbacks.onChunk(content)
+            // 🎯 蕾姆：处理思考链内容（推理模型的思考过程）
+            // DeepSeek R1: delta.reasoning_content
+            // OpenAI o1/o3: 可能使用类似字段
+            if (delta?.reasoning_content && callbacks.onReasoningChunk) {
+              callbacks.onReasoningChunk(delta.reasoning_content)
+            }
+
+            // 处理正常回复内容
+            if (delta?.content) {
+              callbacks.onChunk(delta.content)
             }
 
             if (chunk.choices[0]?.finish_reason) {

@@ -4,14 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>vercel-vite</title>
-
+    <title>Rem</title>
+    <!-- KaTeX CSS -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/KaTeX/0.16.9/katex.min.css" rel="stylesheet">
+    <!-- KaTeX JS -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
     <!-- 🎨 蕾姆的主题初始化脚本 - 防止白屏闪烁 -->
     <script>
       (function() {
         try {
           // 从 localStorage 读取主题设置
-          const storageKey = 'onir-theme-storage'
+          const storageKey = 'onir-theme-storage' 
           const storedData = localStorage.getItem(storageKey)
 
           let resolvedTheme = 'light' // 默认浅色

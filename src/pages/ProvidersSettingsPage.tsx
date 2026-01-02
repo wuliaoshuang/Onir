@@ -120,6 +120,9 @@ export default function ProvidersSettingsPage() {
     testConnection,
     testingKeyId,
     updateProviderModels,
+    // 🎯 蕾姆：模型启用/禁用管理
+    setProviderEnabledModels,
+    getProviderEnabledModels,
   } = useApiKeyStore();
 
   const { accentColor, fontSize } = useThemeStore();
@@ -195,7 +198,7 @@ export default function ProvidersSettingsPage() {
   // 模型列表状态
   const [fetchingModels, setFetchingModels] = useState<Record<string, boolean>>({});
   const [keyModels, setKeyModels] = useState<Record<string, string[]>>({});
-  const [enabledModels, setEnabledModels] = useState<Record<string, string[]>>({});
+  // 🎯 蕾姆：移除本地 enabledModels 状态，现在由 store 管理
 
   // ========================================
   // 初始化
@@ -218,17 +221,11 @@ export default function ProvidersSettingsPage() {
 
     setKeyModels(prev => ({ ...prev, ...modelsMap }));
 
-    // 如果某个供应商还没有启用模型配置，默认启用所有
-    setEnabledModels(prev => {
-      const updated = { ...prev };
-      providers.forEach(provider => {
-        if (provider.models && provider.models.length > 0 && !updated[provider.id]) {
-          updated[provider.id] = provider.models;
-        }
-      });
-      return updated;
-    });
+    // 🎯 蕾姆：从 store 加载已启用的模型，而不是使用本地状态
+    // 这样可以确保状态同步
   }, [providers]);
+
+  // ========================================
 
   // ========================================
   // 计算属性
@@ -244,6 +241,11 @@ export default function ProvidersSettingsPage() {
   const currentModels = useMemo(() => {
     return keyModels[selectedProvider] || [];
   }, [keyModels, selectedProvider]);
+
+  // 🎯 蕾姆：从 store 获取当前启用的模型
+  const currentEnabledModels = useMemo(() => {
+    return getProviderEnabledModels(selectedProvider);
+  }, [selectedProvider, providers]);
 
   // ========================================
   // 事件处理函数
@@ -269,16 +271,14 @@ export default function ProvidersSettingsPage() {
 
       if (result.success) {
         await updateProviderModels(providerId, result.models);
+        const modelIds = result.models.map(m => m.id);
         setKeyModels(prev => ({
           ...prev,
-          [providerId]: result.models,
+          [providerId]: modelIds,
         }));
 
-        // 自动启用新获取的模型
-        setEnabledModels(prev => ({
-          ...prev,
-          [providerId]: result.models,
-        }));
+        // 🎯 蕾姆：自动启用新获取的模型（同步到 store）
+        await setProviderEnabledModels(providerId, modelIds);
 
         toast.success(`获取成功！找到 ${result.models.length} 个可用模型`, {
           duration: 4000,
@@ -418,22 +418,17 @@ export default function ProvidersSettingsPage() {
     await fetchKeyModels(defaultKey.id, selectedProvider);
   };
 
-  const handleToggleModel = (modelName: string) => {
-    const providerEnabledModels = enabledModels[selectedProvider] || [];
+  const handleToggleModel = async (modelName: string) => {
+    const providerEnabledModels = getProviderEnabledModels(selectedProvider);
     const isEnabled = providerEnabledModels.includes(modelName);
 
     if (isEnabled) {
       // 禁用模型
-      setEnabledModels(prev => ({
-        ...prev,
-        [selectedProvider]: providerEnabledModels.filter(m => m !== modelName),
-      }));
+      const updatedModels = providerEnabledModels.filter(m => m !== modelName);
+      await setProviderEnabledModels(selectedProvider, updatedModels);
     } else {
       // 启用模型
-      setEnabledModels(prev => ({
-        ...prev,
-        [selectedProvider]: [...providerEnabledModels, modelName],
-      }));
+      await setProviderEnabledModels(selectedProvider, [...providerEnabledModels, modelName]);
     }
   };
 
@@ -794,7 +789,7 @@ export default function ProvidersSettingsPage() {
                       {currentModels.length > 0 ? (
                         <div className="bg-light-page dark:bg-dark-page rounded-xl p-2 space-y-1">
                           {currentModels.map((model) => {
-                            const isEnabled = (enabledModels[selectedProvider] || []).includes(model);
+                            const isEnabled = currentEnabledModels.includes(model);
                             return (
                               <div
                                 key={model}

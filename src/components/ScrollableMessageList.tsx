@@ -164,12 +164,17 @@ export function ScrollableMessageList({
                     <StreamingMessage
                       messageId={message.id}
                       content={message.content}
+                      reasoning_content={message.reasoning_content}  // 🎯 蕾姆：传递思考链内容
                       isStreaming={true}
                     />
                   ) : (
-                    <div className="prose prose-sm max-w-none prose-p:break-words prose-a:break-words">
-                      <MessageContent content={message.content} />
-                    </div>
+                    // 🎯 蕾姆：静态消息也可能有思考链内容
+                    <StreamingMessage
+                      messageId={message.id}
+                      content={message.content}
+                      reasoning_content={message.reasoning_content}
+                      isStreaming={false}
+                    />
                   )}
 
                   {/* 复制按钮 */}

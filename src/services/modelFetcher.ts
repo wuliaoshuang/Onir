@@ -13,6 +13,8 @@ export interface ModelInfo {
   name?: string
   description?: string
   context_length?: number
+  // 🎯 蕾姆：是否为推理模型（支持思考链）
+  reasoning?: boolean
 }
 
 /**
@@ -20,8 +22,33 @@ export interface ModelInfo {
  */
 export interface ModelsResult {
   success: boolean
-  models: string[]
+  models: ModelInfo[]
   error?: string
+}
+
+/**
+ * 🎯 蕾姆：判断模型是否为推理模型（支持思考链）
+ * @param modelId 模型 ID
+ */
+function isReasoningModel(modelId: string): boolean {
+  const lowerId = modelId.toLowerCase()
+
+  // DeepSeek 推理模型
+  if (lowerId.includes('reasoner') || lowerId.includes('r1')) {
+    return true
+  }
+
+  // OpenAI o1/o3 系列推理模型
+  if (lowerId.startsWith('o1-') || lowerId.startsWith('o3-')) {
+    return true
+  }
+
+  // Google Gemini Thinking 和 Pro 模型（2.5 Pro 默认开启思考链）
+  if (lowerId.includes('thinking') || lowerId.includes('-pro') || lowerId.startsWith('gemini-2.5-pro')) {
+    return true
+  }
+
+  return false
 }
 
 /**
@@ -53,7 +80,10 @@ export class ModelFetcher {
       const data = await response.json()
 
       // DeepSeek API 返回格式: { object: 'list', data: [{ id, ... }] }
-      const models = data.data?.map((model: any) => model.id) || []
+      const models: ModelInfo[] = (data.data || []).map((model: any) => ({
+        id: model.id,
+        reasoning: isReasoningModel(model.id),
+      }))
 
       return {
         success: true,
@@ -94,10 +124,16 @@ export class ModelFetcher {
 
       // OpenAI API 返回格式: { object: 'list', data: [{ id, ... }] }
       // 蕾姆过滤出聊天模型
-      const allModels = data.data?.map((model: any) => model.id) || []
-      const chatModels = allModels.filter((id: string) =>
-        id.startsWith('gpt-') || id.startsWith('o1-') || id.startsWith('chatgpt-')
-      )
+      const allModels = data.data || []
+      const chatModels: ModelInfo[] = allModels
+        .filter((model: any) => {
+          const id = model.id as string
+          return id.startsWith('gpt-') || id.startsWith('o1-') || id.startsWith('o3-') || id.startsWith('chatgpt-')
+        })
+        .map((model: any) => ({
+          id: model.id,
+          reasoning: isReasoningModel(model.id),
+        }))
 
       return {
         success: true,
@@ -142,11 +178,17 @@ export class ModelFetcher {
 
       // Google API 返回格式: { models: [{ name, ... }] }
       // 蕾姆过滤出生成模型（generateContent 为 true）
-      const models = data.models
-        ?.filter((model: any) =>
+      const models: ModelInfo[] = (data.models || [])
+        .filter((model: any) =>
           model.supportedGenerationMethods?.includes('generateContent')
         )
-        .map((model: any) => model.name.replace('models/', '')) || []
+        .map((model: any) => {
+          const id = model.name.replace('models/', '')
+          return {
+            id,
+            reasoning: isReasoningModel(id),
+          }
+        })
 
       return {
         success: true,

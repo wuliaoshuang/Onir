@@ -28,6 +28,10 @@ interface ApiKeyState {
   activeProviders: ProviderType[]
   defaultProvider: ProviderType
 
+  // 🎯 蕾姆新增：每个供应商的启用/禁用模型列表
+  // 格式：{ providerId: string[] } - 每个供应商启用的模型名称数组
+  enabledModels: Record<ProviderType, string[]>
+
   // ========== UI 状态 ==========
   isLoading: boolean
   validatingKeyId: string | null
@@ -67,8 +71,13 @@ interface ApiKeyState {
   getCustomProviders: () => Provider[]
   canDeleteProvider: (providerId: ProviderType) => { canDelete: boolean; reason?: string }
 
-  // 蕾姆新增：更新供应商模型列表（内置和自定义供应商都可以使用）
-  updateProviderModels: (providerId: ProviderType, models: string[]) => Promise<void>
+  // 🎯 蕾姆新增：更新供应商模型列表（接受 ModelInfo[] 以支持推理标识）
+  updateProviderModels: (providerId: ProviderType, modelInfos: { id: string; reasoning?: boolean }[]) => Promise<void>
+
+  // 🎯 蕾姆新增：模型启用/禁用管理
+  setProviderEnabledModels: (providerId: ProviderType, models: string[]) => Promise<void>
+  getProviderEnabledModels: (providerId: ProviderType) => string[]
+  isModelEnabled: (providerId: ProviderType, model: string) => boolean
 
   // 获取方法
   getKeysByProvider: (providerId: ProviderType) => ApiKey[]
@@ -116,6 +125,8 @@ async function saveToStorage(state: ApiKeyState): Promise<void> {
     providers: state.providers,
     activeProviders: state.activeProviders,
     defaultProvider: state.defaultProvider,
+    // 🎯 蕾姆：保存启用的模型列表
+    enabledModels: state.enabledModels,
   }
 
   await secureStorage.setApiKeysStorage(storage)
@@ -140,6 +151,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
     providers: PROVIDERS,
     activeProviders: [],
     defaultProvider: 'deepseek',
+    enabledModels: {},  // 🎯 蕾姆：模型启用状态
     isLoading: false,
     validatingKeyId: null,
     testingKeyId: null,
@@ -202,6 +214,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
             providers: mergedProviders,
             activeProviders: validActiveProviders,
             defaultProvider: validDefaultProvider,
+            enabledModels: storage.enabledModels || {},  // 🎯 蕾姆：保留启用的模型列表
           }
 
           // 如果有数据变更，保存到存储
@@ -215,6 +228,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
             providers: migratedStorage.providers,
             activeProviders: migratedStorage.activeProviders,
             defaultProvider: migratedStorage.defaultProvider,
+            enabledModels: migratedStorage.enabledModels || {},  // 🎯 蕾姆：加载启用的模型列表
             isLoading: false,
           })
         } else {
@@ -224,6 +238,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
             providers: PROVIDERS,
             activeProviders: [],
             defaultProvider: 'deepseek',
+            enabledModels: {},  // 🎯 蕾姆：初始化空模型列表
           }
           await secureStorage.setApiKeysStorage(defaultStorage)
           set({
@@ -231,6 +246,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
             providers: PROVIDERS,
             activeProviders: [],
             defaultProvider: 'deepseek',
+            enabledModels: {},
             isLoading: false,
           })
         }
@@ -285,15 +301,16 @@ export const useApiKeyStore = create<ApiKeyState>()(
 
     /**
      * 删除密钥
+     * 🎯 蕾姆增强：删除密钥时总是清空该供应商的模型列表和启用模型
      */
     removeKey: async (keyId: string) => {
-      const { keys, activeProviders } = get()
+      const { keys, activeProviders, providers, enabledModels } = get()
       const keyToDelete = keys.find(k => k.id === keyId)
 
       if (!keyToDelete) return
 
       // 删除密钥
-      let updatedKeys = keys.filter(k => k.id !== keyId)
+      const updatedKeys = keys.filter(k => k.id !== keyId)
 
       // 如果删除的是默认密钥，需要重新指定默认
       if (keyToDelete.isDefault) {
@@ -303,8 +320,20 @@ export const useApiKeyStore = create<ApiKeyState>()(
         }
       }
 
-      // 如果该供应商没有密钥了，从活跃供应商中移除
+      // 🎯 蕾姆：检查该供应商是否还有其他密钥
       const hasProviderKeys = updatedKeys.some(k => k.providerId === keyToDelete.providerId)
+
+      // 🎯 蕾姆：清空该供应商的模型列表和启用模型（需要重新用剩余密钥验证）
+      const updatedProviders = providers.map(p =>
+        p.id === keyToDelete.providerId
+          ? { ...p, models: [] }
+          : p
+      )
+
+      const updatedEnabledModels = { ...enabledModels }
+      delete updatedEnabledModels[keyToDelete.providerId]
+
+      // 🎯 蕾姆：如果该供应商没有密钥了，同时从活跃供应商中移除
       let updatedActiveProviders = activeProviders
       if (!hasProviderKeys) {
         updatedActiveProviders = activeProviders.filter(p => p !== keyToDelete.providerId)
@@ -313,7 +342,10 @@ export const useApiKeyStore = create<ApiKeyState>()(
       set({
         keys: updatedKeys,
         activeProviders: updatedActiveProviders,
+        providers: updatedProviders,
+        enabledModels: updatedEnabledModels,
       })
+
       await saveToStorage(get())
     },
 
@@ -494,13 +526,19 @@ export const useApiKeyStore = create<ApiKeyState>()(
     },
 
     /**
-     * 🎯 蕾姆新增：获取当前默认供应商的可用模型列表
+     * 🎯 蕾姆新增：获取所有供应商的已启用模型列表
+     * 🎯 蕾姆增强：只返回用户启用的模型，而不是所有模型
      * @returns {string[]} 模型名称数组
      */
     getAvailableModels: () => {
-      const { defaultProvider, providers } = get()
-      const provider = providers.find(p => p.id === defaultProvider)
-      return provider?.models || []
+      const { providers, getProviderEnabledModels } = get()
+      // 获取所有供应商的已启用模型
+      const allEnabledModels: string[] = []
+      providers.forEach(provider => {
+        const enabledModels = getProviderEnabledModels(provider.id)
+        allEnabledModels.push(...enabledModels)
+      })
+      return allEnabledModels
     },
 
     /**
@@ -731,7 +769,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
      * 此方法允许更新内置供应商的 models 字段
      * 用于在测试连接成功后更新可用模型列表
      */
-    updateProviderModels: async (providerId, models) => {
+    updateProviderModels: async (providerId, modelInfos) => {
       const { providers } = get()
       const provider = providers.find(p => p.id === providerId)
 
@@ -740,15 +778,52 @@ export const useApiKeyStore = create<ApiKeyState>()(
         return
       }
 
-      // 更新供应商的 models 字段
+      // 🎯 蕾姆：拆分模型列表为普通模型和推理模型
+      const models = modelInfos.map(m => m.id)
+      const reasoningModels = modelInfos
+        .filter(m => m.reasoning)
+        .map(m => m.id)
+
+      // 更新供应商的 models 和 reasoningModels 字段
       const updatedProviders = providers.map(p =>
-        p.id === providerId ? { ...p, models } : p
+        p.id === providerId
+          ? { ...p, models, reasoningModels }
+          : p
       )
 
       set({ providers: updatedProviders })
       await saveToStorage(get())
 
-      console.log(`蕾姆：已更新供应商 ${providerId} 的模型列表`, models)
+      console.log(`蕾姆：已更新供应商 ${providerId} 的模型列表`, { models, reasoningModels })
+    },
+
+    // 🎯 蕾姆新增：设置供应商的启用模型列表
+    setProviderEnabledModels: async (providerId, models) => {
+      const { enabledModels } = get()
+      const updatedEnabledModels = {
+        ...enabledModels,
+        [providerId]: models,
+      }
+      set({ enabledModels: updatedEnabledModels })
+      await saveToStorage(get())
+      console.log(`蕾姆：已更新供应商 ${providerId} 的启用模型列表`, models)
+    },
+
+    // 🎯 蕾姆新增：获取供应商的启用模型列表
+    getProviderEnabledModels: (providerId) => {
+      const { enabledModels, providers } = get()
+      // 如果没有明确的启用模型配置，返回该供应商的所有模型
+      if (!enabledModels[providerId]) {
+        const provider = providers.find(p => p.id === providerId)
+        return provider?.models || []
+      }
+      return enabledModels[providerId] || []
+    },
+
+    // 🎯 蕾姆新增：检查模型是否启用
+    isModelEnabled: (providerId, model) => {
+      const enabledModels = get().getProviderEnabledModels(providerId)
+      return enabledModels.includes(model)
     },
   }))
 )
@@ -775,7 +850,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
 export async function initCrossWindowSync() {
   return enableCrossWindowSync(
     useApiKeyStore,
-    ['initialize'],  // 重新调用 initialize 方法
-    CrossWindowEventType.API_KEYS_UPDATED
+    CrossWindowEventType.API_KEYS_UPDATED,
+    ['initialize']  // 🎯 蕾姆：重新调用 initialize 方法从存储加载
   )
 }
